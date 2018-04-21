@@ -1,0 +1,513 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hans">
+    
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="1024 blog">
+    <title> - 1024 blog</title>
+    <meta name="author" content="Derek">
+    
+        <meta name="keywords" content="hexo,javascript,">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="Mistack实时监控标签： mistack
+交接人： An email &amp;#122;&amp;#104;&amp;#x65;&amp;#110;&amp;#103;&amp;#100;&amp;#x6f;&amp;#x6e;&amp;#x67;&amp;#x78;&amp;#x75;&amp;#64;&amp;#120;&amp;#x69;&amp;#97;&amp;#x6f;&amp;#x6d;&amp;#x69;&amp;#46;&amp;#x63;&amp;#111;&amp;#x6d; link. developer.
+
+Mistack架构
+Mista">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="1024 blog">
+<meta property="og:url" content="http://yoursite.com/2016/04/28/mistack实时监控/index.html">
+<meta property="og:site_name" content="1024 blog">
+<meta property="og:description" content="Mistack实时监控标签： mistack
+交接人： An email &amp;#122;&amp;#104;&amp;#x65;&amp;#110;&amp;#103;&amp;#100;&amp;#x6f;&amp;#x6e;&amp;#x67;&amp;#x78;&amp;#x75;&amp;#64;&amp;#120;&amp;#x69;&amp;#97;&amp;#x6f;&amp;#x6d;&amp;#x69;&amp;#46;&amp;#x63;&amp;#111;&amp;#x6d; link. developer.
+
+Mistack架构
+Mista">
+<meta property="og:image" content="http://yoursite.com/Users/coral/Documents/work/Mistack/mistack架构图.png =650x300">
+<meta property="og:updated_time" content="2016-04-28T09:45:19.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="1024 blog">
+<meta name="twitter:description" content="Mistack实时监控标签： mistack
+交接人： An email &amp;#122;&amp;#104;&amp;#x65;&amp;#110;&amp;#103;&amp;#100;&amp;#x6f;&amp;#x6e;&amp;#x67;&amp;#x78;&amp;#x75;&amp;#64;&amp;#120;&amp;#x69;&amp;#97;&amp;#x6f;&amp;#x6d;&amp;#x69;&amp;#46;&amp;#x63;&amp;#111;&amp;#x6d; link. developer.
+
+Mistack架构
+Mista">
+<meta name="twitter:image" content="http://yoursite.com/Users/coral/Documents/work/Mistack/mistack架构图.png =650x300">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="http://yoursite.com/assets/images/avatar.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-27vrduj1jopliavvnzi7ibndpmbvg7lzo4a2uswrsi4m5vwauf2qi8s1v3or.min.css">
+    <!--STYLES END-->
+    
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?346bd9aea75cc2ab9e2650c6099bd4e3";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="3">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <h1 class="header-title">
+        <a class="header-title-link" href="/ ">1024 blog</a>
+    </h1>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+            <img class="header-picture" src="/assets/images/avatar.jpg"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="3">
+    
+        <div class="sidebar-profile">
+            <a href="/#about">
+                    <img class="sidebar-profile-picture" src="/assets/images/avatar.jpg"/>
+            </a>
+            <span class="sidebar-profile-name">Derek</span>
+        </div>
+    
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/ "
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                    <span class="sidebar-button-desc">主页</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/categories"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                    <span class="sidebar-button-desc">分类</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/tags"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                    <span class="sidebar-button-desc">标签</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/archives"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                    <span class="sidebar-button-desc">归档</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link st-search-show-outputs"
+                         href="#search"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                    <span class="sidebar-button-desc">搜索</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="#about"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                    <span class="sidebar-button-desc">关于</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://github.com/shanhuhai5739/" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                    <span class="sidebar-button-desc">GitHub</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="mailto:shanhu5739@gmail.com" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                    <span class="sidebar-button-desc">邮箱</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/atom.xml"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                    <span class="sidebar-button-desc">Rss</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+</nav>
+
+            
+            <div id="main" data-behavior="3"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            (no title)
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" content="Thu Apr 28 2016 17:43:42 GMT+0800">
+	
+		    Apr 28, 2016
+    	
+    </time>
+    
+</div>
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <h1 id="Mistack实时监控"><a href="#Mistack实时监控" class="headerlink" title="Mistack实时监控"></a>Mistack实时监控</h1><p>标签： mistack</p>
+<p><strong>交接人</strong>： An email <a href="&#x6d;&#x61;&#105;&#x6c;&#116;&#x6f;&#x3a;&#122;&#104;&#x65;&#110;&#103;&#100;&#x6f;&#x6e;&#x67;&#x78;&#x75;&#64;&#120;&#x69;&#97;&#x6f;&#x6d;&#x69;&#46;&#x63;&#111;&#x6d;">&#122;&#104;&#x65;&#110;&#103;&#100;&#x6f;&#x6e;&#x67;&#x78;&#x75;&#64;&#120;&#x69;&#97;&#x6f;&#x6d;&#x69;&#46;&#x63;&#111;&#x6d;</a> link. <em>developer</em>.</p>
+<hr>
+<h1 id="Mistack架构"><a href="#Mistack架构" class="headerlink" title="Mistack架构"></a>Mistack架构</h1><p><img src="/Users/coral/Documents/work/Mistack/mistack架构图.png =650x300" alt="Mistack架构"></p>
+<h1 id="Mistack容器及代码"><a href="#Mistack容器及代码" class="headerlink" title="Mistack容器及代码"></a>Mistack容器及代码</h1><ul>
+<li><a href="http://mae.be.xiaomi.com/Container/manage/app_id/1160/site_id/62" target="_blank" rel="external">mistack容器管理界面</a></li>
+<li><a href="http://micode.be.xiaomi.com/zhengdongxu/mistack-server/tree/master" target="_blank" rel="external">mistack-server代码</a></li>
+<li><a href="http://micode.be.xiaomi.com/zhengdongxu/mistack-client/tree/master" target="_blank" rel="external">mistack-client代码</a><pre>
+10.101.56.83  mistack-server  数据采集
+10.101.56.61  django          web展示
+10.112.95.34  django          web展示
+</pre>
+
+</li>
+</ul>
+<h1 id="计划任务"><a href="#计划任务" class="headerlink" title="计划任务"></a>计划任务</h1><h4 id="同步主机计划任务"><a href="#同步主机计划任务" class="headerlink" title="同步主机计划任务"></a>同步主机计划任务</h4><pre>
+# mistack api collect machines
+00 00 */1 * * python /home/work/app/mistack-server/bin/mistack_api.py >/dev/null 2>&1
+</pre>
+
+<h4 id="抓取实时数据绘制图表（已弃用）"><a href="#抓取实时数据绘制图表（已弃用）" class="headerlink" title="抓取实时数据绘制图表（已弃用）"></a>抓取实时数据绘制图表（已弃用）</h4><pre>
+# mistack charts
+*/20 * * * * python /home/work/app/mistack-server/bin/mistack_chart.py >/dev/null 2>&1
+</pre>
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/04/28/name/"  data-tooltip="name">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/04/27/Hexo教程-一-——搭建各人博客/" data-tooltip="Hexo教程(一)——搭建各人博客">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2016/04/28/mistack实时监控/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2016/04/28/mistack实时监控/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2016/04/28/mistack实时监控/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#ds-thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="ds-thread" class="ds-thread" data-thread-key="2016/04/28/mistack实时监控/"
+     data-title="" data-url="http://yoursite.com/2016/04/28/mistack实时监控/">
+</div>
+
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2016 Derek. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="3">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/04/28/name/"  data-tooltip="name">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/04/27/Hexo教程-一-——搭建各人博客/" data-tooltip="Hexo教程(一)——搭建各人博客">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2016/04/28/mistack实时监控/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2016/04/28/mistack实时监控/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2016/04/28/mistack实时监控/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#ds-thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="3">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2016/04/28/mistack实时监控/">
+                <i class="fa fa-google-plus"></i><span class="">Share on Google Plus</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2016/04/28/mistack实时监控/">
+                <i class="fa fa-facebook-official"></i><span>Share on Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2016/04/28/mistack实时监控/">
+                <i class="fa fa-twitter"></i><span>Share on Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/avatar.jpg"/>
+        
+            <h4 id="about-card-name">Derek</h4>
+        
+            <h5 id="about-card-bio"><p>author.bio</p>
+</h5>
+        
+        
+            <h5 id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </h5>
+        
+        
+            <h5 id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                Beijing
+            </h5>
+        
+    </div>
+</div>
+
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+    </body>
+    <!--SCRIPTS-->
+<script src="/assets/js/scrip-tu4ziscb5jrkjxubeugdgizktyuugflfq5jvgz4agzzmwifuq01g1lmq8giw.min.js"></script>
+<!--SCRIPTS END-->
+
+    
+        <script type="text/javascript">
+            var duoshuoQuery = {short_name:'abc1024'};
+            (function() {
+                var ds = document.createElement('script');
+                ds.type = 'text/javascript';ds.async = true;
+                ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+                ds.charset = 'UTF-8';
+                (document.getElementsByTagName('head')[0]
+                || document.getElementsByTagName('body')[0]).appendChild(ds);
+            })();
+        </script>
+    
+
+
+
+</html>

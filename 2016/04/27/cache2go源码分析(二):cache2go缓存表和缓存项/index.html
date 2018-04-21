@@ -1,0 +1,611 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="golang," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="1024 blog" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="cache2go源码结构123456789101112131415├── LICENSE.txt├── README.md├── benchmark_test.go // 压力测试程序├── cache.go       // 缓存对象创建├── cache_test.go  // 测试程序├── cacheitem.go   // 缓存项├── cachetable.go  // 缓存表├──">
+<meta property="og:type" content="article">
+<meta property="og:title" content="cache2go源码分析(二):cache2go缓存表和缓存项">
+<meta property="og:url" content="http://yoursite.com/2016/04/27/cache2go源码分析(二):cache2go缓存表和缓存项/index.html">
+<meta property="og:site_name" content="1024 blog">
+<meta property="og:description" content="cache2go源码结构123456789101112131415├── LICENSE.txt├── README.md├── benchmark_test.go // 压力测试程序├── cache.go       // 缓存对象创建├── cache_test.go  // 测试程序├── cacheitem.go   // 缓存项├── cachetable.go  // 缓存表├──">
+<meta property="og:updated_time" content="2016-05-24T10:31:39.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="cache2go源码分析(二):cache2go缓存表和缓存项">
+<meta name="twitter:description" content="cache2go源码结构123456789101112131415├── LICENSE.txt├── README.md├── benchmark_test.go // 压力测试程序├── cache.go       // 缓存对象创建├── cache_test.go  // 测试程序├── cacheitem.go   // 缓存项├── cachetable.go  // 缓存表├──">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Pisces',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> cache2go源码分析(二):cache2go缓存表和缓存项 | 1024 blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">1024 blog</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                cache2go源码分析(二):cache2go缓存表和缓存项
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-04-27T20:38:27+08:00" content="2016-04-27">
+              2016-04-27
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/programming/" itemprop="url" rel="index">
+                    <span itemprop="name">编程</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <hr>
+<h3 id="cache2go源码结构"><a href="#cache2go源码结构" class="headerlink" title="cache2go源码结构"></a>cache2go源码结构</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">├── LICENSE.txt</span><br><span class="line">├── README.md</span><br><span class="line">├── benchmark_test.go // 压力测试程序</span><br><span class="line">├── cache.go       // 缓存对象创建</span><br><span class="line">├── cache_test.go  // 测试程序</span><br><span class="line">├── cacheitem.go   // 缓存项</span><br><span class="line">├── cachetable.go  // 缓存表</span><br><span class="line">├── errors.go  // 自定义错误</span><br><span class="line">└── examples  // 用法案例</span><br><span class="line">    ├── callbacks</span><br><span class="line">    │   └── callbacks.go</span><br><span class="line">    ├── dataloader</span><br><span class="line">    │   └── dataloader.go</span><br><span class="line">    └── mycachedapp</span><br><span class="line">        └── mycachedapp.go</span><br></pre></td></tr></table></figure>
+<h3 id="缓存表结构体"><a href="#缓存表结构体" class="headerlink" title="缓存表结构体"></a>缓存表结构体</h3><p><em>./cache2go/cachetable.go</em></p>
+<p>缓存表是一个map结构，key为表名，value为CacheItem缓存对象<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">// 缓存表结构体</span><br><span class="line">type CacheTable struct &#123;</span><br><span class="line">    // 读写锁</span><br><span class="line">    sync.RWMutex</span><br><span class="line"></span><br><span class="line">    // 缓存表名称</span><br><span class="line">    name string</span><br><span class="line">    // 缓存表中的缓存项</span><br><span class="line">    items map[interface&#123;&#125;]*CacheItem</span><br><span class="line"></span><br><span class="line">    // 缓存表清理定时器</span><br><span class="line">    cleanupTimer *time.Timer</span><br><span class="line">    // 缓存表清理定时器时间间隔</span><br><span class="line">    cleanupInterval time.Duration</span><br><span class="line"></span><br><span class="line">    // 缓存表日志对象</span><br><span class="line">    logger *log.Logger</span><br><span class="line"></span><br><span class="line">    // 回调方法：当获取一个不存在的缓存对象key时触发</span><br><span class="line">    loadData func(key interface&#123;&#125;, args ...interface&#123;&#125;) *CacheItem</span><br><span class="line">    // 回调方法：当添加一个缓存对象到缓存表中时触发</span><br><span class="line">    addedItem func(item *CacheItem)</span><br><span class="line">    // 回调方法：当删除一个对象从缓存表中时触发</span><br><span class="line">    aboutToDeleteItem func(item *CacheItem)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="缓存项结构体"><a href="#缓存项结构体" class="headerlink" title="缓存项结构体"></a>缓存项结构体</h3><p><em>./cache2go/cacheitem.go</em></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">// 缓存项结构体</span><br><span class="line">type CacheItem struct &#123;</span><br><span class="line">    // 读写锁</span><br><span class="line">    sync.RWMutex</span><br><span class="line"></span><br><span class="line">    // 缓存项key</span><br><span class="line">    key interface&#123;&#125;</span><br><span class="line">    // 缓存项数据</span><br><span class="line">    data interface&#123;&#125;</span><br><span class="line">    // 缓存项生命周期，0表示永不失效</span><br><span class="line">    lifeSpan time.Duration</span><br><span class="line"></span><br><span class="line">    // 缓存项创建时间戳</span><br><span class="line">    createdOn time.Time</span><br><span class="line">    // 缓存项访问的时间戳</span><br><span class="line">    accessedOn time.Time</span><br><span class="line">    // 缓存访问次数</span><br><span class="line">    accessCount int64</span><br><span class="line"></span><br><span class="line">    // 回调方法：当缓存项被移除时触发</span><br><span class="line">    aboutToExpire func(key interface&#123;&#125;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="创建缓存表对象"><a href="#创建缓存表对象" class="headerlink" title="创建缓存表对象"></a>创建缓存表对象</h3><p><em>./cache2go/cache.go</em></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">var (</span><br><span class="line">    cache = make(map[string]*CacheTable)</span><br><span class="line">    mutex sync.RWMutex</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">// 返回一个缓存表对象</span><br><span class="line">func Cache(table string) *CacheTable &#123;</span><br><span class="line">    // 创建一个新的缓存表</span><br><span class="line">    mutex.RLock()</span><br><span class="line">    t, ok := cache[table]</span><br><span class="line">    mutex.RUnlock()</span><br><span class="line"></span><br><span class="line">    // 如果创建不成功则实例化CacheTable</span><br><span class="line">    if !ok &#123;</span><br><span class="line">        t = &amp;CacheTable&#123;</span><br><span class="line">            name:  table,</span><br><span class="line">            items: make(map[interface&#123;&#125;]*CacheItem),</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        mutex.Lock()</span><br><span class="line">        cache[table] = t</span><br><span class="line">        mutex.Unlock()</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    return t</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="添加缓存对象"><a href="#添加缓存对象" class="headerlink" title="添加缓存对象"></a>添加缓存对象</h3><p><em>./cache2go/cachetable.go</em></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">// 添加一个缓存对象到缓存表中</span><br><span class="line">// 参数key：缓存项的key，通过key可以找到对应的数据</span><br><span class="line">// 参数liftSpan：缓存项生命周期</span><br><span class="line">// 参数data：缓存项的value（数据）</span><br><span class="line">// 返回：缓存对象</span><br><span class="line">func (table *CacheTable) Add(key interface&#123;&#125;, lifeSpan time.Duration, data interface&#123;&#125;) *CacheItem &#123;</span><br><span class="line">    item := CreateCacheItem(key, lifeSpan, data)</span><br><span class="line"></span><br><span class="line">    // Add item to cache.</span><br><span class="line">    table.Lock()</span><br><span class="line">    table.log(&quot;Adding item with key&quot;, key, &quot;and lifespan of&quot;, lifeSpan, &quot;to table&quot;, table.name)</span><br><span class="line">    table.items[key] = &amp;item</span><br><span class="line"></span><br><span class="line">    // Cache values so we don&apos;t keep blocking the mutex.</span><br><span class="line">    expDur := table.cleanupInterval</span><br><span class="line">    addedItem := table.addedItem</span><br><span class="line">    table.Unlock()</span><br><span class="line"></span><br><span class="line">    // 触发回调函数</span><br><span class="line">    if addedItem != nil &#123;</span><br><span class="line">        addedItem(&amp;item)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // 缓存项生命周期大于0则执行缓存项生命周期检查定时器</span><br><span class="line">    if lifeSpan &gt; 0 &amp;&amp; (expDur == 0 || lifeSpan &lt; expDur) &#123;</span><br><span class="line">        table.expirationCheck()</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    return &amp;item</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><em>./cache2go/cacheitem.go</em></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">// 创建一个缓存项对象</span><br><span class="line">// 参数key：缓存项的key，通过key可以找到对应的数据</span><br><span class="line">// 参数liftSpan：缓存项周期</span><br><span class="line">// 参数data：缓存项的value（数据）</span><br><span class="line">func CreateCacheItem(key interface&#123;&#125;, lifeSpan time.Duration, data interface&#123;&#125;) CacheItem &#123;</span><br><span class="line">    t := time.Now()</span><br><span class="line">    return CacheItem&#123;</span><br><span class="line">        key:           key,</span><br><span class="line">        lifeSpan:      lifeSpan,</span><br><span class="line">        createdOn:     t,</span><br><span class="line">        accessedOn:    t,</span><br><span class="line">        accessCount:   0,</span><br><span class="line">        aboutToExpire: nil,</span><br><span class="line">        data:          data,</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="设置删除时回调"><a href="#设置删除时回调" class="headerlink" title="设置删除时回调"></a>设置删除时回调</h3><p><em>./cache2go/cachetable.go</em></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">// 删除时回调：当删除一个缓存对象时回调该方法</span><br><span class="line">func (table *CacheTable) SetAboutToDeleteItemCallback(f func(*CacheItem)) &#123;</span><br><span class="line">    table.Lock()</span><br><span class="line">    defer table.Unlock()</span><br><span class="line">    table.aboutToDeleteItem = f</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="删除缓存对象"><a href="#删除缓存对象" class="headerlink" title="删除缓存对象"></a>删除缓存对象</h3><p><em>./cache2go/cachetable.go</em></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">// 删除一个缓存项从缓存表中</span><br><span class="line">func (table *CacheTable) Delete(key interface&#123;&#125;) (*CacheItem, error) &#123;</span><br><span class="line">    table.RLock()</span><br><span class="line">    r, ok := table.items[key]</span><br><span class="line">    if !ok &#123;</span><br><span class="line">        table.RUnlock()</span><br><span class="line">        return nil, ErrKeyNotFound</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // Cache value so we don&apos;t keep blocking the mutex.</span><br><span class="line">    aboutToDeleteItem := table.aboutToDeleteItem</span><br><span class="line">    table.RUnlock()</span><br><span class="line"></span><br><span class="line">    // Trigger callbacks before deleting an item from cache.</span><br><span class="line">    // 触发回调函数</span><br><span class="line">    if aboutToDeleteItem != nil &#123;</span><br><span class="line">        aboutToDeleteItem(r)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    r.RLock()</span><br><span class="line">    defer r.RUnlock()</span><br><span class="line">    if r.aboutToExpire != nil &#123;</span><br><span class="line">        r.aboutToExpire(key)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    table.Lock()</span><br><span class="line">    defer table.Unlock()</span><br><span class="line">    table.log(&quot;Deleting item with key&quot;, key, &quot;created on&quot;, r.createdOn, &quot;and hit&quot;, r.accessCount, &quot;times from table&quot;, table.name)</span><br><span class="line">    delete(table.items, key)</span><br><span class="line"></span><br><span class="line">    return r, nil</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="清空所有缓存对象"><a href="#清空所有缓存对象" class="headerlink" title="清空所有缓存对象"></a>清空所有缓存对象</h3><p><em>./cache2go/cachetable.go</em></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">// 删除所有缓存项从缓存表中</span><br><span class="line">func (table *CacheTable) Flush() &#123;</span><br><span class="line">    table.Lock()</span><br><span class="line">    defer table.Unlock()</span><br><span class="line"></span><br><span class="line">    table.log(&quot;Flushing table&quot;, table.name)</span><br><span class="line"></span><br><span class="line">    table.items = make(map[interface&#123;&#125;]*CacheItem)</span><br><span class="line">    table.cleanupInterval = 0</span><br><span class="line">    if table.cleanupTimer != nil &#123;</span><br><span class="line">        table.cleanupTimer.Stop()</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="缓存项失效定时器实现"><a href="#缓存项失效定时器实现" class="headerlink" title="缓存项失效定时器实现"></a>缓存项失效定时器实现</h3><p><em>./cache2go/cachetable.go</em></p>
+<p>每次从缓存表中取值时会执行KeepAlive函数，更新accessedOn和accessCount字段，用于判断当前缓存项是否过期</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">if ok &#123;</span><br><span class="line">    // Update access counter and timestamp.</span><br><span class="line">    r.KeepAlive()</span><br><span class="line">    return r, nil</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><em>./cache2go/cacheitem.go</em></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">// 更新缓存项访问的时间戳并访问次数+1</span><br><span class="line">func (item *CacheItem) KeepAlive() &#123;</span><br><span class="line">    item.Lock()</span><br><span class="line">    defer item.Unlock()</span><br><span class="line">    item.accessedOn = time.Now()</span><br><span class="line">    item.accessCount++</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><em>./cache2go/cachetable.go</em></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line">// 缓存项生命周期检查定时器</span><br><span class="line">func (table *CacheTable) expirationCheck() &#123;</span><br><span class="line">    table.Lock()</span><br><span class="line">    if table.cleanupTimer != nil &#123;</span><br><span class="line">        table.cleanupTimer.Stop()</span><br><span class="line">    &#125;</span><br><span class="line">    if table.cleanupInterval &gt; 0 &#123;</span><br><span class="line">        table.log(&quot;Expiration check triggered after&quot;, table.cleanupInterval, &quot;for table&quot;, table.name)</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        table.log(&quot;Expiration check installed for table&quot;, table.name)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // Cache value so we don&apos;t keep blocking the mutex.</span><br><span class="line">    items := table.items</span><br><span class="line">    table.Unlock()</span><br><span class="line"></span><br><span class="line">    // To be more accurate with timers, we would need to update &apos;now&apos; on every</span><br><span class="line">    // loop iteration. Not sure it&apos;s really efficient though.</span><br><span class="line">    // 判断缓存项是否过期</span><br><span class="line">    // 使用当前时间戳(now) 减去 缓存项最新访问的时间戳(accessedOn)得到的时间如果大于等于缓存项的缓存周期则说明该缓存项已经过期，删除该key。否则获取下一次清理的时间间隔(smallestDuration)</span><br><span class="line">    now := time.Now()</span><br><span class="line">    smallestDuration := 0 * time.Second</span><br><span class="line">    for key, item := range items &#123;</span><br><span class="line">        // Cache values so we don&apos;t keep blocking the mutex.</span><br><span class="line">        item.RLock()</span><br><span class="line">        lifeSpan := item.lifeSpan</span><br><span class="line">        accessedOn := item.accessedOn</span><br><span class="line">        item.RUnlock()</span><br><span class="line"></span><br><span class="line">        if lifeSpan == 0 &#123;</span><br><span class="line">            continue</span><br><span class="line">        &#125;</span><br><span class="line">        if now.Sub(accessedOn) &gt;= lifeSpan &#123;</span><br><span class="line">            // Item has excessed its lifespan.</span><br><span class="line">            table.Delete(key)</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            // Find the item chronologically closest to its end-of-lifespan.</span><br><span class="line">            if smallestDuration == 0 || lifeSpan &lt; smallestDuration &#123;</span><br><span class="line">                smallestDuration = lifeSpan - now.Sub(accessedOn)</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // 设置下一次清理的时间间隔</span><br><span class="line">    table.Lock()</span><br><span class="line">    table.cleanupInterval = smallestDuration</span><br><span class="line">    if smallestDuration &gt; 0 &#123;</span><br><span class="line">        table.cleanupTimer = time.AfterFunc(smallestDuration, func() &#123;</span><br><span class="line">            go table.expirationCheck()</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;</span><br><span class="line">    table.Unlock()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+      
+    </div>
+    
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/golang/" rel="tag">#golang</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/04/27/hexo/" rel="next" title="Hexo">
+                <i class="fa fa-chevron-left"></i> Hexo
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/04/28/cache2go源码分析(一):cache2go应用场景/" rel="prev" title="cache2go源码分析(一):cache2go应用场景">
+                cache2go源码分析(一):cache2go应用场景 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.jpg"
+               alt="Derek" />
+          <p class="site-author-name" itemprop="name">Derek</p>
+          <p class="site-description motion-element" itemprop="description">If you only do what you can do you'll never be more than you are now</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">3</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">1</span>
+                <span class="site-state-item-name">分类</span>
+              
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">1</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#cache2go源码结构"><span class="nav-number">1.</span> <span class="nav-text">cache2go源码结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#缓存表结构体"><span class="nav-number">2.</span> <span class="nav-text">缓存表结构体</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#缓存项结构体"><span class="nav-number">3.</span> <span class="nav-text">缓存项结构体</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#创建缓存表对象"><span class="nav-number">4.</span> <span class="nav-text">创建缓存表对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#添加缓存对象"><span class="nav-number">5.</span> <span class="nav-text">添加缓存对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#设置删除时回调"><span class="nav-number">6.</span> <span class="nav-text">设置删除时回调</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除缓存对象"><span class="nav-number">7.</span> <span class="nav-text">删除缓存对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#清空所有缓存对象"><span class="nav-number">8.</span> <span class="nav-text">清空所有缓存对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#缓存项失效定时器实现"><span class="nav-number">9.</span> <span class="nav-text">缓存项失效定时器实现</span></a></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Derek</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.0.1"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+  
+  
+  
+
+  
+
+  
+
+</body>
+</html>
