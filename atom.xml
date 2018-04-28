@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://yoursite.com/"/>
-  <updated>2018-04-28T08:04:05.000Z</updated>
+  <updated>2018-04-28T08:46:30.000Z</updated>
   <id>http://yoursite.com/</id>
   
   <author>
@@ -20,7 +20,7 @@
     <link href="http://yoursite.com/2018/04/28/bytom%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-P2P%E7%BD%91%E7%BB%9C-upnp%E7%AB%AF%E5%8F%A3%E6%98%A0%E5%B0%84/"/>
     <id>http://yoursite.com/2018/04/28/bytom源码分析-P2P网络-upnp端口映射/</id>
     <published>2018-04-28T08:03:38.000Z</published>
-    <updated>2018-04-28T08:04:05.000Z</updated>
+    <updated>2018-04-28T08:46:30.000Z</updated>
     
     <content type="html">&lt;h1 id=&quot;bytom源码分析-P2P网络-upnp端口映射&quot;&gt;&lt;a href=&quot;#bytom源码分析-P2P网络-upnp端口映射&quot; class=&quot;headerlink&quot; title=&quot;bytom源码分析-P2P网络-upnp端口映射&quot;&gt;&lt;/a&gt;bytom源码分析-P2P网络-upnp端口映射&lt;/h1&gt;&lt;h2 id=&quot;简介&quot;&gt;&lt;a href=&quot;#简介&quot; class=&quot;headerlink&quot; title=&quot;简介&quot;&gt;&lt;/a&gt;简介&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;https://github.com/Bytom/bytom&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://github.com/Bytom/bytom&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;本章介绍bytom代码P2P网络中upnp端口映射&lt;/p&gt;
@@ -44,6 +44,10 @@
     </summary>
     
     
+      <category term="golang" scheme="http://yoursite.com/tags/golang/"/>
+    
+      <category term="bytom" scheme="http://yoursite.com/tags/bytom/"/>
+    
   </entry>
   
   <entry>
@@ -51,7 +55,7 @@
     <link href="http://yoursite.com/2018/04/21/bytom%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-%E5%90%AF%E5%8A%A8%E4%B8%8E%E5%81%9C%E6%AD%A2/"/>
     <id>http://yoursite.com/2018/04/21/bytom源码分析-启动与停止/</id>
     <published>2018-04-21T04:25:42.000Z</published>
-    <updated>2018-04-21T09:15:44.000Z</updated>
+    <updated>2018-04-28T08:46:04.000Z</updated>
     
     <content type="html">&lt;h1 id=&quot;bytom源码分析-启动与停止&quot;&gt;&lt;a href=&quot;#bytom源码分析-启动与停止&quot; class=&quot;headerlink&quot; title=&quot;bytom源码分析-启动与停止&quot;&gt;&lt;/a&gt;bytom源码分析-启动与停止&lt;/h1&gt;&lt;h2 id=&quot;简介&quot;&gt;&lt;a href=&quot;#简介&quot; class=&quot;headerlink&quot; title=&quot;简介&quot;&gt;&lt;/a&gt;简介&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;https://github.com/Bytom/bytom&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://github.com/Bytom/bytom&lt;/a&gt;&lt;br&gt;本章介绍bytom代码启动、节点初始化、及停止的过程&lt;/p&gt;
 &lt;blockquote&gt;
@@ -107,6 +111,10 @@
     
     </summary>
     
+    
+      <category term="golang" scheme="http://yoursite.com/tags/golang/"/>
+    
+      <category term="bytom" scheme="http://yoursite.com/tags/bytom/"/>
     
   </entry>
   
