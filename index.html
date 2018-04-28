@@ -241,6 +241,112 @@
             
               
                 
+                <a class="post-title-link" href="/2018/04/28/bytom源码分析-P2P网络-upnp端口映射/" itemprop="url">
+                  bytom源码分析-P2P网络-upnp端口映射
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2018-04-28T16:03:38+08:00" content="2018-04-28">
+              2018-04-28
+            </time>
+          </span>
+
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="bytom源码分析-P2P网络-upnp端口映射"><a href="#bytom源码分析-P2P网络-upnp端口映射" class="headerlink" title="bytom源码分析-P2P网络-upnp端口映射"></a>bytom源码分析-P2P网络-upnp端口映射</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p><a href="https://github.com/Bytom/bytom" target="_blank" rel="external">https://github.com/Bytom/bytom</a></p>
+<p>本章介绍bytom代码P2P网络中upnp端口映射</p>
+<blockquote>
+<p>作者使用MacOS操作系统，其他平台也大同小异</p>
+<p>Golang Version: 1.8</p>
+</blockquote>
+<h2 id="UPNP介绍"><a href="#UPNP介绍" class="headerlink" title="UPNP介绍"></a>UPNP介绍</h2><p>UPNP（Universal Plug and Play）通用即插即用。UPNP端口映射将一个外部端口映射到一个内网ip:port。从而实现p2p网络从外网能够穿透网关访问到内网的bytomd节点。</p>
+<h2 id="UPNP协议"><a href="#UPNP协议" class="headerlink" title="UPNP协议"></a>UPNP协议</h2><p>SSDP（Simple Service Discovery Protocol 简单服务发现协议）<br>GENA（Generic Event Notification Architecture 通用事件通知结构）<br>SOAP（Simple Object Access Protocol 简单对象访问协议）<br>XML（Extensible Markup Language 可扩张标记语言）</p>
+<h2 id="UPNP代码"><a href="#UPNP代码" class="headerlink" title="UPNP代码"></a>UPNP代码</h2><p><strong> p2p/upnp/upnp.go </strong></p>
+<h3 id="发现网络中支持UPNP功能的设备"><a href="#发现网络中支持UPNP功能的设备" class="headerlink" title="发现网络中支持UPNP功能的设备"></a>发现网络中支持UPNP功能的设备</h3><p>从网络中发现支持UPNP功能的设备，并得到该设备的location和url等相关信息<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br></pre></td><td class="code"><pre><span class="line">type upnpNAT struct &#123;</span><br><span class="line">	serviceURL string // 设备的描述文件URL，用于得到该设备的描述信息</span><br><span class="line">	ourIP      string // 节点本地ip地址</span><br><span class="line">	urnDomain  string // 设备类型</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func Discover() (nat NAT, err error) &#123;</span><br><span class="line">	ssdp, err := net.ResolveUDPAddr(&quot;udp4&quot;, &quot;239.255.255.250:1900&quot;)</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line">	conn, err := net.ListenPacket(&quot;udp4&quot;, &quot;:0&quot;)</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line">	socket := conn.(*net.UDPConn)</span><br><span class="line">	defer socket.Close()</span><br><span class="line"></span><br><span class="line">	err = socket.SetDeadline(time.Now().Add(3 * time.Second))</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	st := &quot;InternetGatewayDevice:1&quot;</span><br><span class="line"></span><br><span class="line">	// 多播请求：M-SEARCH SSDP协议定义的发现请求。</span><br><span class="line">	buf := bytes.NewBufferString(</span><br><span class="line">		&quot;M-SEARCH * HTTP/1.1\r\n&quot; +</span><br><span class="line">			&quot;HOST: 239.255.255.250:1900\r\n&quot; +</span><br><span class="line">			&quot;ST: ssdp:all\r\n&quot; +</span><br><span class="line">			&quot;MAN: \&quot;ssdp:discover\&quot;\r\n&quot; +</span><br><span class="line">			&quot;MX: 2\r\n\r\n&quot;)</span><br><span class="line">	message := buf.Bytes()</span><br><span class="line">	answerBytes := make([]byte, 1024)</span><br><span class="line">	for i := 0; i &lt; 3; i++ &#123;</span><br><span class="line">		// 向239.255.255.250:1900发送一条多播请求</span><br><span class="line">		_, err = socket.WriteToUDP(message, ssdp)</span><br><span class="line">		if err != nil &#123;</span><br><span class="line">			return</span><br><span class="line">		&#125;</span><br><span class="line">		// 如果从网络中发现UPNP设备则会从239.255.255.250:1900收到响应消息</span><br><span class="line">		var n int</span><br><span class="line">		n, _, err = socket.ReadFromUDP(answerBytes)</span><br><span class="line">		for &#123;</span><br><span class="line">			n, _, err = socket.ReadFromUDP(answerBytes)</span><br><span class="line">			if err != nil &#123;</span><br><span class="line">				break</span><br><span class="line">			&#125;</span><br><span class="line">			answer := string(answerBytes[0:n])</span><br><span class="line">			if strings.Index(answer, st) &lt; 0 &#123;</span><br><span class="line">				continue</span><br><span class="line">			&#125;</span><br><span class="line">			// HTTP header field names are case-insensitive.</span><br><span class="line">			// http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2</span><br><span class="line">			// 获得设备location</span><br><span class="line">			locString := &quot;\r\nlocation:&quot;</span><br><span class="line">			answer = strings.ToLower(answer)</span><br><span class="line">			locIndex := strings.Index(answer, locString)</span><br><span class="line">			if locIndex &lt; 0 &#123;</span><br><span class="line">				continue</span><br><span class="line">			&#125;</span><br><span class="line">			loc := answer[locIndex+len(locString):]</span><br><span class="line">			endIndex := strings.Index(loc, &quot;\r\n&quot;)</span><br><span class="line">			if endIndex &lt; 0 &#123;</span><br><span class="line">				continue</span><br><span class="line">			&#125;</span><br><span class="line">			// 获得设备的描述url和设备类型</span><br><span class="line">			locURL := strings.TrimSpace(loc[0:endIndex])</span><br><span class="line">			var serviceURL, urnDomain string</span><br><span class="line">			serviceURL, urnDomain, err = getServiceURL(locURL)</span><br><span class="line">			if err != nil &#123;</span><br><span class="line">				return</span><br><span class="line">			&#125;</span><br><span class="line">			var ourIP net.IP</span><br><span class="line">			ourIP, err = localIPv4()</span><br><span class="line">			if err != nil &#123;</span><br><span class="line">				return</span><br><span class="line">			&#125;</span><br><span class="line">			nat = &amp;upnpNAT&#123;serviceURL: serviceURL, ourIP: ourIP.String(), urnDomain: urnDomain&#125;</span><br><span class="line">			return</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	err = errors.New(&quot;UPnP port discovery failed.&quot;)</span><br><span class="line">	return</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="添加端口映射"><a href="#添加端口映射" class="headerlink" title="添加端口映射"></a>添加端口映射</h3><p>向upnp设备发送一条http post请求，将内部网络ip:port和外部网络ip:port做映射<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">func (n *upnpNAT) AddPortMapping(protocol string, externalPort, internalPort int, description string, timeout int) (mappedExternalPort int, err error) &#123;</span><br><span class="line">	// A single concatenation would break ARM compilation.</span><br><span class="line">	message := &quot;&lt;u:AddPortMapping xmlns:u=\&quot;urn:&quot; + n.urnDomain + &quot;:service:WANIPConnection:1\&quot;&gt;\r\n&quot; +</span><br><span class="line">		&quot;&lt;NewRemoteHost&gt;&lt;/NewRemoteHost&gt;&lt;NewExternalPort&gt;&quot; + strconv.Itoa(externalPort)</span><br><span class="line">	message += &quot;&lt;/NewExternalPort&gt;&lt;NewProtocol&gt;&quot; + protocol + &quot;&lt;/NewProtocol&gt;&quot;</span><br><span class="line">	message += &quot;&lt;NewInternalPort&gt;&quot; + strconv.Itoa(internalPort) + &quot;&lt;/NewInternalPort&gt;&quot; +</span><br><span class="line">		&quot;&lt;NewInternalClient&gt;&quot; + n.ourIP + &quot;&lt;/NewInternalClient&gt;&quot; +</span><br><span class="line">		&quot;&lt;NewEnabled&gt;1&lt;/NewEnabled&gt;&lt;NewPortMappingDescription&gt;&quot;</span><br><span class="line">	message += description +</span><br><span class="line">		&quot;&lt;/NewPortMappingDescription&gt;&lt;NewLeaseDuration&gt;&quot; + strconv.Itoa(timeout) +</span><br><span class="line">		&quot;&lt;/NewLeaseDuration&gt;&lt;/u:AddPortMapping&gt;&quot;</span><br><span class="line"></span><br><span class="line">	var response *http.Response</span><br><span class="line">	response, err = soapRequest(n.serviceURL, &quot;AddPortMapping&quot;, message, n.urnDomain)</span><br><span class="line">	if response != nil &#123;</span><br><span class="line">		defer response.Body.Close()</span><br><span class="line">	&#125;</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	// TODO: check response to see if the port was forwarded</span><br><span class="line">	// log.Println(message, response)</span><br><span class="line">	// JAE:</span><br><span class="line">	// body, err := ioutil.ReadAll(response.Body)</span><br><span class="line">	// fmt.Println(string(body), err)</span><br><span class="line">	mappedExternalPort = externalPort</span><br><span class="line">	_ = response</span><br><span class="line">	return</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="删除端口映射"><a href="#删除端口映射" class="headerlink" title="删除端口映射"></a>删除端口映射</h3><p>向upnp设备发送一条http post请求，将内部网络ip:port和外部网络ip:port删除映射关系<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">func (n *upnpNAT) DeletePortMapping(protocol string, externalPort, internalPort int) (err error) &#123;</span><br><span class="line"></span><br><span class="line">	message := &quot;&lt;u:DeletePortMapping xmlns:u=\&quot;urn:&quot; + n.urnDomain + &quot;:service:WANIPConnection:1\&quot;&gt;\r\n&quot; +</span><br><span class="line">		&quot;&lt;NewRemoteHost&gt;&lt;/NewRemoteHost&gt;&lt;NewExternalPort&gt;&quot; + strconv.Itoa(externalPort) +</span><br><span class="line">		&quot;&lt;/NewExternalPort&gt;&lt;NewProtocol&gt;&quot; + protocol + &quot;&lt;/NewProtocol&gt;&quot; +</span><br><span class="line">		&quot;&lt;/u:DeletePortMapping&gt;&quot;</span><br><span class="line"></span><br><span class="line">	var response *http.Response</span><br><span class="line">	response, err = soapRequest(n.serviceURL, &quot;DeletePortMapping&quot;, message, n.urnDomain)</span><br><span class="line">	if response != nil &#123;</span><br><span class="line">		defer response.Body.Close()</span><br><span class="line">	&#125;</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	// TODO: check response to see if the port was deleted</span><br><span class="line">	// log.Println(message, response)</span><br><span class="line">	_ = response</span><br><span class="line">	return</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="获取映射后的公网地址"><a href="#获取映射后的公网地址" class="headerlink" title="获取映射后的公网地址"></a>获取映射后的公网地址</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">func (n *upnpNAT) GetExternalAddress() (addr net.IP, err error) &#123;</span><br><span class="line">	info, err := n.getExternalIPAddress()</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line">	addr = net.ParseIP(info.externalIpAddress)</span><br><span class="line">	return</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (n *upnpNAT) getExternalIPAddress() (info statusInfo, err error) &#123;</span><br><span class="line"></span><br><span class="line">	message := &quot;&lt;u:GetExternalIPAddress xmlns:u=\&quot;urn:&quot; + n.urnDomain + &quot;:service:WANIPConnection:1\&quot;&gt;\r\n&quot; +</span><br><span class="line">		&quot;&lt;/u:GetExternalIPAddress&gt;&quot;</span><br><span class="line"></span><br><span class="line">	var response *http.Response</span><br><span class="line">	response, err = soapRequest(n.serviceURL, &quot;GetExternalIPAddress&quot;, message, n.urnDomain)</span><br><span class="line">	if response != nil &#123;</span><br><span class="line">		defer response.Body.Close()</span><br><span class="line">	&#125;</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line">	var envelope Envelope</span><br><span class="line">	data, err := ioutil.ReadAll(response.Body)</span><br><span class="line">	reader := bytes.NewReader(data)</span><br><span class="line">	xml.NewDecoder(reader).Decode(&amp;envelope)</span><br><span class="line"></span><br><span class="line">	info = statusInfo&#123;envelope.Soap.ExternalIP.IPAddress&#125;</span><br><span class="line"></span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	return</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+    
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2018/04/21/bytom源码分析-启动与停止/" itemprop="url">
                   bytom源码分析-启动与停止
                 </a>
@@ -756,7 +862,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">4</span>
+              <span class="site-state-item-count">5</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
