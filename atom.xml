@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://yoursite.com/"/>
-  <updated>2018-08-16T10:47:23.000Z</updated>
+  <updated>2018-08-16T14:40:19.000Z</updated>
   <id>http://yoursite.com/</id>
   
   <author>
@@ -14,6 +14,62 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>bytom源码分析-Api-Server接口服务</title>
+    <link href="http://yoursite.com/2018/08/16/bytom%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-Api-Server%E6%8E%A5%E5%8F%A3%E6%9C%8D%E5%8A%A1/"/>
+    <id>http://yoursite.com/2018/08/16/bytom源码分析-Api-Server接口服务/</id>
+    <published>2018-08-16T11:31:27.000Z</published>
+    <updated>2018-08-16T14:40:19.000Z</updated>
+    
+    <content type="html">&lt;h1 id=&quot;bytom源码分析-Api-Server接口服务&quot;&gt;&lt;a href=&quot;#bytom源码分析-Api-Server接口服务&quot; class=&quot;headerlink&quot; title=&quot;bytom源码分析-Api-Server接口服务&quot;&gt;&lt;/a&gt;bytom源码分析-Api-Server接口服务&lt;/h1&gt;&lt;h2 id=&quot;简介&quot;&gt;&lt;a href=&quot;#简介&quot; class=&quot;headerlink&quot; title=&quot;简介&quot;&gt;&lt;/a&gt;简介&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;https://github.com/Bytom/bytom&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://github.com/Bytom/bytom&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;本章介绍bytom代码Api-Server接口服务&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;作者使用MacOS操作系统，其他平台也大同小异&lt;/p&gt;
+&lt;p&gt;Golang Version: 1.8&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&quot;Api-Server接口服务&quot;&gt;&lt;a href=&quot;#Api-Server接口服务&quot; class=&quot;headerlink&quot; title=&quot;Api-Server接口服务&quot;&gt;&lt;/a&gt;Api-Server接口服务&lt;/h2&gt;&lt;p&gt;Api Server是比原链中非常重要的一个功能，在比原链的架构中专门服务于bytomcli和dashboard，他的功能是接收并处理用户和矿池相关的请求。默认启动9888端口。总之主要功能如下：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;接收并处理用户或矿池发送的请求&lt;/li&gt;
+&lt;li&gt;管理交易：打包、签名、提交等操作&lt;/li&gt;
+&lt;li&gt;管理本地比原钱包&lt;/li&gt;
+&lt;li&gt;管理本地p2p节点信息&lt;/li&gt;
+&lt;li&gt;管理本地矿工挖矿操作等&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在Api Server服务过程中，在监听地址listener上接收bytomcli或dashboard的请求访问。对每一个请求，Api Server均会创建一个新的goroutine来处理请求。首先Api Server读取请求内容，解析请求，接着匹配相应的路由项，随后调用路由项的Handler回调函数来处理。最后Handler处理完请求之后给bytomcli响应该请求。&lt;/p&gt;
+&lt;h2 id=&quot;Api-Server源码分析&quot;&gt;&lt;a href=&quot;#Api-Server源码分析&quot; class=&quot;headerlink&quot; title=&quot;Api-Server源码分析&quot;&gt;&lt;/a&gt;Api-Server源码分析&lt;/h2&gt;&lt;p&gt;在bytomd启动过程中，bytomd使用golang标准库http.NewServeMux()创建一个router路由器，提供请求的路由分发功能。创建Api Server主要有三部分组成：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;初始化http.NewServeMux()得到mux&lt;/li&gt;
+&lt;li&gt;为mux.Handle添加多个有效的router路由项。每一个路由项由HTTP请求方法（GET、POST、PUT、DELET）、URL和Handler回调函数组成&lt;/li&gt;
+&lt;li&gt;将监听地址作为参数，最终执行Serve(listener)开始服务于外部请求&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&quot;创建Api对象&quot;&gt;&lt;a href=&quot;#创建Api对象&quot; class=&quot;headerlink&quot; title=&quot;创建Api对象&quot;&gt;&lt;/a&gt;创建Api对象&lt;/h3&gt;&lt;p&gt;&lt;strong&gt; node/node.go &lt;/strong&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;func (n *Node) initAndstartApiServer() &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	listenAddr := env.String(&amp;quot;LISTEN&amp;quot;, n.config.ApiAddress)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	env.Parse()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	n.api.StartServer(*listenAddr)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;&lt;strong&gt; api/api.go &lt;/strong&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore) *API &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	api := &amp;amp;API&amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		sync:          sync,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		wallet:        wallet,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		chain:         chain,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		accessTokens:  token,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		txFeedTracker: txfeeds,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		cpuMiner:      cpuMiner,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		miningPool:    miningPool,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	api.buildHandler()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	api.initServer(config)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	return api&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;首先，实例化api对象。Api-server管理的事情很多，所以参数也相对较多。&lt;br&gt;listenAddr本地端口，如果系统没有设置LISTEN变量则使用config.ApiAddress配置地址，默认为9888&lt;/p&gt;
+&lt;p&gt;NewAPI函数我们看到有三个操作：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;实例化api对象&lt;/li&gt;
+&lt;li&gt;api.buildHandler添加router路由项&lt;/li&gt;
+&lt;li&gt;api.initServer实例化http.Server，配置auth验证等&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&quot;router路由项&quot;&gt;&lt;a href=&quot;#router路由项&quot; class=&quot;headerlink&quot; title=&quot;router路由项&quot;&gt;&lt;/a&gt;router路由项&lt;/h3&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;func (a *API) buildHandler() &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	walletEnable := false&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	m := http.NewServeMux()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	if a.wallet != nil &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		walletEnable = true&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		m.Handle(&amp;quot;/create-account&amp;quot;, jsonHandler(a.createAccount))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		m.Handle(&amp;quot;/list-accounts&amp;quot;, jsonHandler(a.listAccounts))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		m.Handle(&amp;quot;/delete-account&amp;quot;, jsonHandler(a.deleteAccount))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	// ...&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;router路由项过多。这里只介绍关于账号相关的handler。其他的handler大同小异。&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;m.Handle(&amp;quot;/create-account&amp;quot;, jsonHandler(a.createAccount))&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;我们可以看到一条router项由url和对应的handle回调函数组成。当我们请求的url匹配到/create-account时，Api-Server会执行a.createAccount函数，并将用户的传参也带过去。&lt;/p&gt;
+&lt;h3 id=&quot;启动Api-Server服务&quot;&gt;&lt;a href=&quot;#启动Api-Server服务&quot; class=&quot;headerlink&quot; title=&quot;启动Api-Server服务&quot;&gt;&lt;/a&gt;启动Api-Server服务&lt;/h3&gt;&lt;p&gt;&lt;strong&gt; api/api.go &lt;/strong&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;func (a *API) StartServer(address string) &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	log.WithField(&amp;quot;api address:&amp;quot;, address).Info(&amp;quot;Rpc listen&amp;quot;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	listener, err := net.Listen(&amp;quot;tcp&amp;quot;, address)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	if err != nil &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		cmn.Exit(cmn.Fmt(&amp;quot;Failed to register tcp port: %v&amp;quot;, err))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	go func() &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		if err := a.server.Serve(listener); err != nil &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;			log.WithField(&amp;quot;error&amp;quot;, errors.Wrap(err, &amp;quot;Serve&amp;quot;)).Error(&amp;quot;Rpc server&amp;quot;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;通过golang标准库net.listen方法，监听本地的地址端口。由于http服务是一个持久运行的服务，我们启动一个go程专门运行http服务。当运行a.server.Serve没有任何报错时，我们可以看到服务器上启动的9888端口。此时Api-Server已经处于等待接收用户的请求。&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;h1 id=&quot;bytom源码分析-Api-Server接口服务&quot;&gt;&lt;a href=&quot;#bytom源码分析-Api-Server接口服务&quot; class=&quot;headerlink&quot; title=&quot;bytom源码分析-Api-Server接口服务&quot;&gt;&lt;/a&gt;bytom源码分析-Api-
+    
+    </summary>
+    
+    
+  </entry>
   
   <entry>
     <title>bytom源码分析-孤块管理</title>

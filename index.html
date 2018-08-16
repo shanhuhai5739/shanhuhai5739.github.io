@@ -241,6 +241,137 @@
             
               
                 
+                <a class="post-title-link" href="/2018/08/16/bytom源码分析-Api-Server接口服务/" itemprop="url">
+                  bytom源码分析-Api-Server接口服务
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2018-08-16T19:31:27+08:00" content="2018-08-16">
+              2018-08-16
+            </time>
+          </span>
+
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="bytom源码分析-Api-Server接口服务"><a href="#bytom源码分析-Api-Server接口服务" class="headerlink" title="bytom源码分析-Api-Server接口服务"></a>bytom源码分析-Api-Server接口服务</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p><a href="https://github.com/Bytom/bytom" target="_blank" rel="external">https://github.com/Bytom/bytom</a></p>
+<p>本章介绍bytom代码Api-Server接口服务</p>
+<blockquote>
+<p>作者使用MacOS操作系统，其他平台也大同小异</p>
+<p>Golang Version: 1.8</p>
+</blockquote>
+<h2 id="Api-Server接口服务"><a href="#Api-Server接口服务" class="headerlink" title="Api-Server接口服务"></a>Api-Server接口服务</h2><p>Api Server是比原链中非常重要的一个功能，在比原链的架构中专门服务于bytomcli和dashboard，他的功能是接收并处理用户和矿池相关的请求。默认启动9888端口。总之主要功能如下：</p>
+<ul>
+<li>接收并处理用户或矿池发送的请求</li>
+<li>管理交易：打包、签名、提交等操作</li>
+<li>管理本地比原钱包</li>
+<li>管理本地p2p节点信息</li>
+<li>管理本地矿工挖矿操作等</li>
+</ul>
+<p>在Api Server服务过程中，在监听地址listener上接收bytomcli或dashboard的请求访问。对每一个请求，Api Server均会创建一个新的goroutine来处理请求。首先Api Server读取请求内容，解析请求，接着匹配相应的路由项，随后调用路由项的Handler回调函数来处理。最后Handler处理完请求之后给bytomcli响应该请求。</p>
+<h2 id="Api-Server源码分析"><a href="#Api-Server源码分析" class="headerlink" title="Api-Server源码分析"></a>Api-Server源码分析</h2><p>在bytomd启动过程中，bytomd使用golang标准库http.NewServeMux()创建一个router路由器，提供请求的路由分发功能。创建Api Server主要有三部分组成：</p>
+<ul>
+<li>初始化http.NewServeMux()得到mux</li>
+<li>为mux.Handle添加多个有效的router路由项。每一个路由项由HTTP请求方法（GET、POST、PUT、DELET）、URL和Handler回调函数组成</li>
+<li>将监听地址作为参数，最终执行Serve(listener)开始服务于外部请求</li>
+</ul>
+<h3 id="创建Api对象"><a href="#创建Api对象" class="headerlink" title="创建Api对象"></a>创建Api对象</h3><p><strong> node/node.go </strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">func (n *Node) initAndstartApiServer() &#123;</span><br><span class="line">	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens)</span><br><span class="line"></span><br><span class="line">	listenAddr := env.String(&quot;LISTEN&quot;, n.config.ApiAddress)</span><br><span class="line">	env.Parse()</span><br><span class="line">	n.api.StartServer(*listenAddr)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong> api/api.go </strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore) *API &#123;</span><br><span class="line">	api := &amp;API&#123;</span><br><span class="line">		sync:          sync,</span><br><span class="line">		wallet:        wallet,</span><br><span class="line">		chain:         chain,</span><br><span class="line">		accessTokens:  token,</span><br><span class="line">		txFeedTracker: txfeeds,</span><br><span class="line">		cpuMiner:      cpuMiner,</span><br><span class="line">		miningPool:    miningPool,</span><br><span class="line">	&#125;</span><br><span class="line">	api.buildHandler()</span><br><span class="line">	api.initServer(config)</span><br><span class="line"></span><br><span class="line">	return api</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先，实例化api对象。Api-server管理的事情很多，所以参数也相对较多。<br>listenAddr本地端口，如果系统没有设置LISTEN变量则使用config.ApiAddress配置地址，默认为9888</p>
+<p>NewAPI函数我们看到有三个操作：</p>
+<ol>
+<li>实例化api对象</li>
+<li>api.buildHandler添加router路由项</li>
+<li>api.initServer实例化http.Server，配置auth验证等</li>
+</ol>
+<h3 id="router路由项"><a href="#router路由项" class="headerlink" title="router路由项"></a>router路由项</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">func (a *API) buildHandler() &#123;</span><br><span class="line">	walletEnable := false</span><br><span class="line">	m := http.NewServeMux()</span><br><span class="line">	if a.wallet != nil &#123;</span><br><span class="line">		walletEnable = true</span><br><span class="line"></span><br><span class="line">		m.Handle(&quot;/create-account&quot;, jsonHandler(a.createAccount))</span><br><span class="line">		m.Handle(&quot;/list-accounts&quot;, jsonHandler(a.listAccounts))</span><br><span class="line">		m.Handle(&quot;/delete-account&quot;, jsonHandler(a.deleteAccount))</span><br><span class="line">	// ...</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>router路由项过多。这里只介绍关于账号相关的handler。其他的handler大同小异。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">m.Handle(&quot;/create-account&quot;, jsonHandler(a.createAccount))</span><br></pre></td></tr></table></figure></p>
+<p>我们可以看到一条router项由url和对应的handle回调函数组成。当我们请求的url匹配到/create-account时，Api-Server会执行a.createAccount函数，并将用户的传参也带过去。</p>
+<h3 id="启动Api-Server服务"><a href="#启动Api-Server服务" class="headerlink" title="启动Api-Server服务"></a>启动Api-Server服务</h3><p><strong> api/api.go </strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">func (a *API) StartServer(address string) &#123;</span><br><span class="line">	log.WithField(&quot;api address:&quot;, address).Info(&quot;Rpc listen&quot;)</span><br><span class="line">	listener, err := net.Listen(&quot;tcp&quot;, address)</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		cmn.Exit(cmn.Fmt(&quot;Failed to register tcp port: %v&quot;, err))</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	go func() &#123;</span><br><span class="line">		if err := a.server.Serve(listener); err != nil &#123;</span><br><span class="line">			log.WithField(&quot;error&quot;, errors.Wrap(err, &quot;Serve&quot;)).Error(&quot;Rpc server&quot;)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过golang标准库net.listen方法，监听本地的地址端口。由于http服务是一个持久运行的服务，我们启动一个go程专门运行http服务。当运行a.server.Serve没有任何报错时，我们可以看到服务器上启动的9888端口。此时Api-Server已经处于等待接收用户的请求。</p>
+
+          
+        
+      
+    </div>
+    
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2018/08/16/bytom源码分析-孤儿块管理/" itemprop="url">
                   bytom源码分析-孤块管理
                 </a>
@@ -1100,7 +1231,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">7</span>
+              <span class="site-state-item-count">8</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
