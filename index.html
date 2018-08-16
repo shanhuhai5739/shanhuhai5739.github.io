@@ -241,6 +241,131 @@
             
               
                 
+                <a class="post-title-link" href="/2018/08/16/bytom源码分析-孤儿块管理/" itemprop="url">
+                  bytom源码分析-孤块管理
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2018-08-16T11:53:55+08:00" content="2018-08-16">
+              2018-08-16
+            </time>
+          </span>
+
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="bytom源码分析-孤块管理"><a href="#bytom源码分析-孤块管理" class="headerlink" title="bytom源码分析-孤块管理"></a>bytom源码分析-孤块管理</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p><a href="https://github.com/Bytom/bytom" target="_blank" rel="external">https://github.com/Bytom/bytom</a></p>
+<p>本章介绍bytom代码孤块管理</p>
+<blockquote>
+<p>作者使用MacOS操作系统，其他平台也大同小异</p>
+<p>Golang Version: 1.8</p>
+</blockquote>
+<h2 id="孤块介绍"><a href="#孤块介绍" class="headerlink" title="孤块介绍"></a>孤块介绍</h2><h3 id="什么是孤块"><a href="#什么是孤块" class="headerlink" title="什么是孤块"></a>什么是孤块</h3><p>当节点收到了一个有效的区块，而在现有的主链中却未找到它的父区块，那么这个区块被认为是“孤块”。父区块是指当前区块的PreviousBlockHash字段指向上一区块的hash值。</p>
+<p>接收到的孤块会被存储在孤块池中，直到它们的父区块被节点收到。一旦收到了父区块，节点就会将孤块从孤块池中取出，并且连接到它的父区块，让它作为区块链的一部分。</p>
+<h3 id="孤块出现的原因"><a href="#孤块出现的原因" class="headerlink" title="孤块出现的原因"></a>孤块出现的原因</h3><p>当两个或多个区块在很短的时间间隔内被挖出来，节点有可能会以不同的顺序接收到它们，这个时候孤块现象就会出现。</p>
+<p>我们假设有三个高度分别为100、101、102的块，分别以102、101、100的颠倒顺序被节点接收。此时节点将102、101放入到孤块管理缓存池中，等待彼此的父块。当高度为100的区块被同步进来时，会被验证区块和交易，然后存储到区块链上。这时会对孤块缓存池进行递归查询，根据高度为100的区块找到101的区块并存储到区块链上，再根据高度为101的区块找到102的区块并存储到区块链上。</p>
+<h2 id="孤块源码分析"><a href="#孤块源码分析" class="headerlink" title="孤块源码分析"></a>孤块源码分析</h2><h3 id="孤块管理缓存池结构体"><a href="#孤块管理缓存池结构体" class="headerlink" title="孤块管理缓存池结构体"></a>孤块管理缓存池结构体</h3><p><strong> protocol/orphan_manage.go </strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">type OrphanManage struct &#123;</span><br><span class="line">	orphan      map[bc.Hash]*types.Block</span><br><span class="line">	prevOrphans map[bc.Hash][]*bc.Hash</span><br><span class="line">	mtx         sync.RWMutex</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func NewOrphanManage() *OrphanManage &#123;</span><br><span class="line">	return &amp;OrphanManage&#123;</span><br><span class="line">		orphan:      make(map[bc.Hash]*types.Block),</span><br><span class="line">		prevOrphans: make(map[bc.Hash][]*bc.Hash),</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>orphan 存储孤块，key为block hash，value为block结构体</li>
+<li>prevOrphans 存储孤块的父块</li>
+<li>mtx 互斥锁，保护map结构在多并发读写状态下保持数据一致</li>
+</ul>
+<h3 id="添加孤块到缓存池"><a href="#添加孤块到缓存池" class="headerlink" title="添加孤块到缓存池"></a>添加孤块到缓存池</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">func (o *OrphanManage) Add(block *types.Block) &#123;</span><br><span class="line">	blockHash := block.Hash()</span><br><span class="line">	o.mtx.Lock()</span><br><span class="line">	defer o.mtx.Unlock()</span><br><span class="line"></span><br><span class="line">	if _, ok := o.orphan[blockHash]; ok &#123;</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	o.orphan[blockHash] = block</span><br><span class="line">	o.prevOrphans[block.PreviousBlockHash] = append(o.prevOrphans[block.PreviousBlockHash], &amp;blockHash)</span><br><span class="line"></span><br><span class="line">	log.WithFields(log.Fields&#123;&quot;hash&quot;: blockHash.String(), &quot;height&quot;: block.Height&#125;).Info(&quot;add block to orphan&quot;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>当一个孤块被添加到缓存池中，还需要记录该孤块的父块hash。用于父块hash的查询</p>
+<h3 id="查询孤块和父孤块"><a href="#查询孤块和父孤块" class="headerlink" title="查询孤块和父孤块"></a>查询孤块和父孤块</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">func (o *OrphanManage) Get(hash *bc.Hash) (*types.Block, bool) &#123;</span><br><span class="line">	o.mtx.RLock()</span><br><span class="line">	block, ok := o.orphan[*hash]</span><br><span class="line">	o.mtx.RUnlock()</span><br><span class="line">	return block, ok</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (o *OrphanManage) GetPrevOrphans(hash *bc.Hash) ([]*bc.Hash, bool) &#123;</span><br><span class="line">	o.mtx.RLock()</span><br><span class="line">	prevOrphans, ok := o.prevOrphans[*hash]</span><br><span class="line">	o.mtx.RUnlock()</span><br><span class="line">	return prevOrphans, ok</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="删除孤块"><a href="#删除孤块" class="headerlink" title="删除孤块"></a>删除孤块</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">func (o *OrphanManage) Delete(hash *bc.Hash) &#123;</span><br><span class="line">	o.mtx.Lock()</span><br><span class="line">	defer o.mtx.Unlock()</span><br><span class="line">	block, ok := o.orphan[*hash]</span><br><span class="line">	if !ok &#123;</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line">	delete(o.orphan, *hash)</span><br><span class="line"></span><br><span class="line">	prevOrphans, ok := o.prevOrphans[block.PreviousBlockHash]</span><br><span class="line">	if !ok || len(prevOrphans) == 1 &#123;</span><br><span class="line">		delete(o.prevOrphans, block.PreviousBlockHash)</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	for i, preOrphan := range prevOrphans &#123;</span><br><span class="line">		if preOrphan == hash &#123;</span><br><span class="line">			o.prevOrphans[block.PreviousBlockHash] = append(prevOrphans[:i], prevOrphans[i+1:]...)</span><br><span class="line">			return</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>删除孤块的过程中，同时删除父块</p>
+<h3 id="孤块处理逻辑"><a href="#孤块处理逻辑" class="headerlink" title="孤块处理逻辑"></a>孤块处理逻辑</h3><p><strong> protocol/block.go </strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">func (c *Chain) processBlock(block *types.Block) (bool, error) &#123;</span><br><span class="line">blockHash := block.Hash()</span><br><span class="line">	if c.BlockExist(&amp;blockHash) &#123;</span><br><span class="line">		log.WithFields(log.Fields&#123;&quot;hash&quot;: blockHash.String(), &quot;height&quot;: block.Height&#125;).Info(&quot;block has been processed&quot;)</span><br><span class="line">		return c.orphanManage.BlockExist(&amp;blockHash), nil</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	if parent := c.index.GetNode(&amp;block.PreviousBlockHash); parent == nil &#123;</span><br><span class="line">		c.orphanManage.Add(block)</span><br><span class="line">		return true, nil</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	if err := c.saveBlock(block); err != nil &#123;</span><br><span class="line">		return false, err</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	bestBlock := c.saveSubBlock(block)</span><br><span class="line">	// ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>processBlock函数处理block块加入区块链上之前的过程。</p>
+<p>c.BlockExist判断当前block块是否存在于区块链上或是否存在孤块缓存池中，如果存在则返回。</p>
+<p>c.index.GetNode判断block块的父节点是否存在。如果在现有的主链中却未找到它的父区块则将block块添加到孤块缓存池。</p>
+<p>c.saveBlock走到了这一步说明，block父节点是存在于区块链，则将block块存储到区块链。该函数会验证区块和交易有效性。</p>
+<p>saveSubBlock 代码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">func (c *Chain) saveSubBlock(block *types.Block) *types.Block &#123;</span><br><span class="line">	blockHash := block.Hash()</span><br><span class="line">	prevOrphans, ok := c.orphanManage.GetPrevOrphans(&amp;blockHash)</span><br><span class="line">	if !ok &#123;</span><br><span class="line">		return block</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	bestBlock := block</span><br><span class="line">	for _, prevOrphan := range prevOrphans &#123;</span><br><span class="line">		orphanBlock, ok := c.orphanManage.Get(prevOrphan)</span><br><span class="line">		if !ok &#123;</span><br><span class="line">			log.WithFields(log.Fields&#123;&quot;hash&quot;: prevOrphan.String()&#125;).Warning(&quot;saveSubBlock fail to get block from orphanManage&quot;)</span><br><span class="line">			continue</span><br><span class="line">		&#125;</span><br><span class="line">		if err := c.saveBlock(orphanBlock); err != nil &#123;</span><br><span class="line">			log.WithFields(log.Fields&#123;&quot;hash&quot;: prevOrphan.String(), &quot;height&quot;: orphanBlock.Height&#125;).Warning(&quot;saveSubBlock fail to save block&quot;)</span><br><span class="line">			continue</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		if subBestBlock := c.saveSubBlock(orphanBlock); subBestBlock.Height &gt; bestBlock.Height &#123;</span><br><span class="line">			bestBlock = subBestBlock</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	return bestBlock</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>saveSubBlock 在孤块缓存池中查询是否存在当前区块的下一个区块。比如当前区块高度为100，则在孤块缓存池中查询是否有区块高度为101的区块。如果存在则将101区块存储到区块链并从孤块缓存池中删除该区块。</p>
+<p>saveSubBlock是一个递归函数的实现。目的是为了寻找最深叶子节点的递归方式。比如当前区块高度为100的，递归查询出高度为99、98、97等高度的区块。</p>
+
+          
+        
+      
+    </div>
+    
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2018/04/28/bytom源码分析-P2P网络-地址簿/" itemprop="url">
                   bytom源码分析-P2P网络-地址簿
                 </a>
@@ -975,7 +1100,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">6</span>
+              <span class="site-state-item-count">7</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
