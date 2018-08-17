@@ -1,0 +1,609 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="golang,bytom," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Derek's blog" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="bytom源码分析-protobuf生成比原核心代码简介https://github.com/Bytom/bytom
+本章介绍bytom代码Api-Server接口服务
+
+作者使用MacOS操作系统，其他平台也大同小异
+Golang Version: 1.8
+
+protobuf生成比原核心代码protobuf介绍Protocol buffers是一个灵活的、高效的、自动化的用于对结构化数据进行序列">
+<meta property="og:type" content="article">
+<meta property="og:title" content="bytom源码分析-protobuf生成核心代码">
+<meta property="og:url" content="http://yoursite.com/2018/08/17/bytom源码分析-protobuf生成比原核心代码/index.html">
+<meta property="og:site_name" content="Derek's blog">
+<meta property="og:description" content="bytom源码分析-protobuf生成比原核心代码简介https://github.com/Bytom/bytom
+本章介绍bytom代码Api-Server接口服务
+
+作者使用MacOS操作系统，其他平台也大同小异
+Golang Version: 1.8
+
+protobuf生成比原核心代码protobuf介绍Protocol buffers是一个灵活的、高效的、自动化的用于对结构化数据进行序列">
+<meta property="og:updated_time" content="2018-08-17T10:45:40.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="bytom源码分析-protobuf生成核心代码">
+<meta name="twitter:description" content="bytom源码分析-protobuf生成比原核心代码简介https://github.com/Bytom/bytom
+本章介绍bytom代码Api-Server接口服务
+
+作者使用MacOS操作系统，其他平台也大同小异
+Golang Version: 1.8
+
+protobuf生成比原核心代码protobuf介绍Protocol buffers是一个灵活的、高效的、自动化的用于对结构化数据进行序列">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Pisces',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> bytom源码分析-protobuf生成核心代码 | Derek's blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Derek's blog</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-user fa-fw"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                bytom源码分析-protobuf生成核心代码
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2018-08-17T18:30:17+08:00" content="2018-08-17">
+              2018-08-17
+            </time>
+          </span>
+
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="bytom源码分析-protobuf生成比原核心代码"><a href="#bytom源码分析-protobuf生成比原核心代码" class="headerlink" title="bytom源码分析-protobuf生成比原核心代码"></a>bytom源码分析-protobuf生成比原核心代码</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p><a href="https://github.com/Bytom/bytom" target="_blank" rel="external">https://github.com/Bytom/bytom</a></p>
+<p>本章介绍bytom代码Api-Server接口服务</p>
+<blockquote>
+<p>作者使用MacOS操作系统，其他平台也大同小异</p>
+<p>Golang Version: 1.8</p>
+</blockquote>
+<h2 id="protobuf生成比原核心代码"><a href="#protobuf生成比原核心代码" class="headerlink" title="protobuf生成比原核心代码"></a>protobuf生成比原核心代码</h2><h3 id="protobuf介绍"><a href="#protobuf介绍" class="headerlink" title="protobuf介绍"></a>protobuf介绍</h3><p>Protocol buffers是一个灵活的、高效的、自动化的用于对结构化数据进行序列化的协议。Protocol buffers序列化后的码流更小、速度更快、操作更简单。只需要将序列化的数据结构(.proto文件)，便可以生成的源代码。</p>
+<h3 id="protobuf-3-0语法介绍"><a href="#protobuf-3-0语法介绍" class="headerlink" title="protobuf 3.0语法介绍"></a>protobuf 3.0语法介绍</h3><p><a href="https://developers.google.com/protocol-buffers/docs/proto3" target="_blank" rel="external">protobuf 语法</a></p>
+<h3 id="protobuf-安装"><a href="#protobuf-安装" class="headerlink" title="protobuf 安装"></a>protobuf 安装</h3><h4 id="安装protobuf-3-4-0"><a href="#安装protobuf-3-4-0" class="headerlink" title="安装protobuf 3.4.0"></a>安装protobuf 3.4.0</h4><p><a href="https://github.com/google/protobuf/releases" target="_blank" rel="external">protobuf download</a></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">./configure</span><br><span class="line">make</span><br><span class="line">make install</span><br><span class="line">protoc —version</span><br></pre></td></tr></table></figure>
+<h4 id="安装grpc-go"><a href="#安装grpc-go" class="headerlink" title="安装grpc-go"></a>安装grpc-go</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> PATH=<span class="variable">$PATH</span>:<span class="variable">$GOPATH</span>/bin</span><br><span class="line">go get -u google.golang.org/grpc</span><br><span class="line">go get -u github.com/golang/protobuf/protoc-gen-go</span><br></pre></td></tr></table></figure>
+<h3 id="查看比原bc-proto核心文件"><a href="#查看比原bc-proto核心文件" class="headerlink" title="查看比原bc.proto核心文件"></a>查看比原bc.proto核心文件</h3><p><strong> protocol/bc/bc.proto </strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br></pre></td><td class="code"><pre><span class="line">syntax = <span class="string">"proto3"</span>;</span><br><span class="line"></span><br><span class="line">package bc;</span><br><span class="line"></span><br><span class="line">message Hash &#123;</span><br><span class="line">  fixed64 v0 = 1;</span><br><span class="line">  fixed64 v1 = 2;</span><br><span class="line">  fixed64 v2 = 3;</span><br><span class="line">  fixed64 v3 = 4;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message Program &#123;</span><br><span class="line">  uint64 vm_version = 1;</span><br><span class="line">  bytes  code       = 2;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// This message <span class="built_in">type</span> duplicates Hash, above. One alternative is to</span><br><span class="line">// embed a Hash inside an AssetID. But it<span class="string">'s useful for AssetID to be</span><br><span class="line">// plain old data (without pointers). Another alternative is use Hash</span><br><span class="line">// in any protobuf types where an AssetID is called for, but it'</span>s</span><br><span class="line">// preferable to have <span class="built_in">type</span> safety.</span><br><span class="line">message AssetID &#123;</span><br><span class="line">  fixed64 v0 = 1;</span><br><span class="line">  fixed64 v1 = 2;</span><br><span class="line">  fixed64 v2 = 3;</span><br><span class="line">  fixed64 v3 = 4;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message AssetAmount &#123;</span><br><span class="line">  AssetID asset_id = 1;</span><br><span class="line">  uint64  amount   = 2;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message AssetDefinition &#123;</span><br><span class="line">  Program issuance_program = 1;</span><br><span class="line">  Hash    data             = 2;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message ValueSource &#123;</span><br><span class="line">  Hash        ref      = 1;</span><br><span class="line">  AssetAmount value    = 2;</span><br><span class="line">  uint64      position = 3;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message ValueDestination &#123;</span><br><span class="line">  Hash        ref      = 1;</span><br><span class="line">  AssetAmount value    = 2;</span><br><span class="line">  uint64      position = 3;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message BlockHeader &#123;</span><br><span class="line">  uint64            version                 = 1;</span><br><span class="line">  uint64            height                  = 2;</span><br><span class="line">  Hash              previous_block_id       = 3;</span><br><span class="line">  uint64            timestamp               = 4;</span><br><span class="line">  Hash              transactions_root       = 5;</span><br><span class="line">  Hash              transaction_status_<span class="built_in">hash</span> = 6;</span><br><span class="line">  uint64            nonce                   = 7;</span><br><span class="line">  uint64            bits                    = 8;</span><br><span class="line">  TransactionStatus transaction_status      = 9;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message TxHeader &#123;</span><br><span class="line">  uint64        version         = 1;</span><br><span class="line">  uint64        serialized_size = 2;</span><br><span class="line">  uint64        time_range      = 3;</span><br><span class="line">  repeated Hash result_ids      = 4;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message TxVerifyResult &#123;</span><br><span class="line">  bool status_fail = 1;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message TransactionStatus &#123;</span><br><span class="line">  uint64                  version        = 1;</span><br><span class="line">  repeated TxVerifyResult verify_status  = 2;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message Mux &#123;</span><br><span class="line">  repeated ValueSource      sources              = 1; // issuances, spends, and muxes</span><br><span class="line">  Program                   program              = 2;</span><br><span class="line">  repeated ValueDestination witness_destinations = 3; // outputs, retirements, and muxes</span><br><span class="line">  repeated bytes            witness_arguments    = 4;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message Coinbase &#123;</span><br><span class="line">  ValueDestination witness_destination = 1;</span><br><span class="line">  bytes            arbitrary           = 2;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message Output &#123;</span><br><span class="line">  ValueSource <span class="built_in">source</span>          = 1;</span><br><span class="line">  Program     control_program = 2;</span><br><span class="line">  uint64      ordinal         = 3;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message Retirement &#123;</span><br><span class="line">  ValueSource <span class="built_in">source</span>   = 1;</span><br><span class="line">  uint64      ordinal  = 2;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message Issuance &#123;</span><br><span class="line">  Hash             nonce_<span class="built_in">hash</span>               = 1;</span><br><span class="line">  AssetAmount      value                    = 2;</span><br><span class="line">  ValueDestination witness_destination      = 3;</span><br><span class="line">  AssetDefinition  witness_asset_definition = 4;</span><br><span class="line">  repeated bytes   witness_arguments        = 5;</span><br><span class="line">  uint64           ordinal                  = 6;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">message Spend &#123;</span><br><span class="line">  Hash             spent_output_id     = 1;</span><br><span class="line">  ValueDestination witness_destination = 2;</span><br><span class="line">  repeated bytes   witness_arguments   = 3;</span><br><span class="line">  uint64           ordinal             = 4;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="根据bc-proto生成bc-pb-go代码"><a href="#根据bc-proto生成bc-pb-go代码" class="headerlink" title="根据bc.proto生成bc.pb.go代码"></a>根据bc.proto生成bc.pb.go代码</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">protoc -I/usr/local/include -I. \</span><br><span class="line">      -I$&#123;GOPATH&#125;/src \</span><br><span class="line">      --go_out=plugins=grpc:. \</span><br><span class="line">      ./*.proto</span><br></pre></td></tr></table></figure>
+<p>执行完上面命令，我们会看到当前目录下生成的bc.pb.go文件，该文件在比原链中承载这block、transaction、coinbase等重要数据结构</p>
+
+      
+    </div>
+    
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/golang/" rel="tag">#golang</a>
+          
+            <a href="/tags/bytom/" rel="tag">#bytom</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/08/16/bytom源码分析-Api-Server接口服务/" rel="next" title="bytom源码分析-Api-Server接口服务">
+                <i class="fa fa-chevron-left"></i> bytom源码分析-Api-Server接口服务
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.jpg"
+               alt="Derek" />
+          <p class="site-author-name" itemprop="name">Derek</p>
+          <p class="site-description motion-element" itemprop="description">If you only do what you can do you'll never be more than you are now</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">9</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">1</span>
+                <span class="site-state-item-name">分类</span>
+              
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">2</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#bytom源码分析-protobuf生成比原核心代码"><span class="nav-number">1.</span> <span class="nav-text">bytom源码分析-protobuf生成比原核心代码</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#简介"><span class="nav-number">1.1.</span> <span class="nav-text">简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#protobuf生成比原核心代码"><span class="nav-number">1.2.</span> <span class="nav-text">protobuf生成比原核心代码</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#protobuf介绍"><span class="nav-number">1.2.1.</span> <span class="nav-text">protobuf介绍</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#protobuf-3-0语法介绍"><span class="nav-number">1.2.2.</span> <span class="nav-text">protobuf 3.0语法介绍</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#protobuf-安装"><span class="nav-number">1.2.3.</span> <span class="nav-text">protobuf 安装</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#安装protobuf-3-4-0"><span class="nav-number">1.2.3.1.</span> <span class="nav-text">安装protobuf 3.4.0</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#安装grpc-go"><span class="nav-number">1.2.3.2.</span> <span class="nav-text">安装grpc-go</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#查看比原bc-proto核心文件"><span class="nav-number">1.2.4.</span> <span class="nav-text">查看比原bc.proto核心文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#根据bc-proto生成bc-pb-go代码"><span class="nav-number">1.2.5.</span> <span class="nav-text">根据bc.proto生成bc.pb.go代码</span></a></li></ol></li></ol></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Derek</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.0.1"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+  
+  
+  
+
+  
+
+  
+
+</body>
+</html>
