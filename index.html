@@ -241,6 +241,152 @@
             
               
                 
+                <a class="post-title-link" href="/2018/08/18/Derek解读-Bytom源码分析-创世区块/" itemprop="url">
+                  Derek解读-Bytom源码分析-创世区块
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2018-08-18T17:20:05+08:00" content="2018-08-18">
+              2018-08-18
+            </time>
+          </span>
+
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="Derek解读-Bytom源码分析-创世区块"><a href="#Derek解读-Bytom源码分析-创世区块" class="headerlink" title="Derek解读-Bytom源码分析-创世区块"></a>Derek解读-Bytom源码分析-创世区块</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p><a href="https://github.com/Bytom/bytom" target="_blank" rel="external">https://github.com/Bytom/bytom</a></p>
+<p>本章介绍Derek解读-Bytom源码分析-创世区块</p>
+<blockquote>
+<p>作者使用MacOS操作系统，其他平台也大同小异</p>
+<p>Golang Version: 1.8</p>
+</blockquote>
+<h2 id="创世区块介绍"><a href="#创世区块介绍" class="headerlink" title="创世区块介绍"></a>创世区块介绍</h2><p>区块链里的第一个区块创被称为创世区块。它是区块链里面所有区块的共同祖先。</p>
+<p>在比原链中创世区块被硬编码到bytomd中，每一个比原节点都始于同一个创世区块，这能确保创世区块不会被改变。每个节点都把创世区块作为区块链的首区块，从而构建了一个安全的、可信的区块链。</p>
+<h2 id="获取创世区块"><a href="#获取创世区块" class="headerlink" title="获取创世区块"></a>获取创世区块</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">./bytomcli get-block 0</span><br><span class="line">&#123;</span><br><span class="line">  &quot;bits&quot;: 2161727821137910500,</span><br><span class="line">  &quot;difficulty&quot;: &quot;15154807&quot;,</span><br><span class="line">  &quot;hash&quot;: &quot;a75483474799ea1aa6bb910a1a5025b4372bf20bef20f246a2c2dc5e12e8a053&quot;,</span><br><span class="line">  &quot;height&quot;: 0,</span><br><span class="line">  &quot;nonce&quot;: 9253507043297,</span><br><span class="line">  &quot;previous_block_hash&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;,</span><br><span class="line">  &quot;size&quot;: 546,</span><br><span class="line">  &quot;timestamp&quot;: 1524549600,</span><br><span class="line">  &quot;transaction_merkle_root&quot;: &quot;58e45ceb675a0b3d7ad3ab9d4288048789de8194e9766b26d8f42fdb624d4390&quot;,</span><br><span class="line">  &quot;transaction_status_hash&quot;: &quot;c9c377e5192668bc0a367e4a4764f11e7c725ecced1d7b6a492974fab1b6d5bc&quot;,</span><br><span class="line">  &quot;transactions&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;id&quot;: &quot;158d7d7c6a8d2464725d508fafca76f0838d998eacaacb42ccc58cfb0c155352&quot;,</span><br><span class="line">      &quot;inputs&quot;: [</span><br><span class="line">        &#123;</span><br><span class="line">          &quot;amount&quot;: 0,</span><br><span class="line">          &quot;arbitrary&quot;: &quot;496e666f726d6174696f6e20697320706f7765722e202d2d204a616e2f31312f323031332e20436f6d707574696e6720697320706f7765722e202d2d204170722f32342f323031382e&quot;,</span><br><span class="line">          &quot;asset_definition&quot;: &#123;&#125;,</span><br><span class="line">          &quot;asset_id&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;,</span><br><span class="line">          &quot;type&quot;: &quot;coinbase&quot;</span><br><span class="line">        &#125;</span><br><span class="line">      ],</span><br><span class="line">      &quot;outputs&quot;: [</span><br><span class="line">        &#123;</span><br><span class="line">          &quot;address&quot;: &quot;bm1q3jwsv0lhfmndnlag3kp6avpcq6pkd3xy8e5r88&quot;,</span><br><span class="line">          &quot;amount&quot;: 140700041250000000,</span><br><span class="line">          &quot;asset_definition&quot;: &#123;&#125;,</span><br><span class="line">          &quot;asset_id&quot;: &quot;ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;,</span><br><span class="line">          &quot;control_program&quot;: &quot;00148c9d063ff74ee6d9ffa88d83aeb038068366c4c4&quot;,</span><br><span class="line">          &quot;id&quot;: &quot;e3325bf07c4385af4b60ad6ecc682ee0773f9b96e1cfbbae9f0f12b86b5f1093&quot;,</span><br><span class="line">          &quot;position&quot;: 0,</span><br><span class="line">          &quot;type&quot;: &quot;control&quot;</span><br><span class="line">        &#125;</span><br><span class="line">      ],</span><br><span class="line">      &quot;size&quot;: 151,</span><br><span class="line">      &quot;status_fail&quot;: false,</span><br><span class="line">      &quot;time_range&quot;: 0,</span><br><span class="line">      &quot;version&quot;: 1</span><br><span class="line">    &#125;</span><br><span class="line">  ],</span><br><span class="line">  &quot;version&quot;: 1</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>使用bytomcli客户端查询高度为0的区块信息。我们可以看到以上输出结果。</p>
+<ul>
+<li>bits: 目标值,挖矿时计算的hash之后要小于等于的目标值则新块构建成功</li>
+<li>difficulty: 难度值，矿工找到下一个有效区块的难度。该参数并不存储在区块链上，是由bits计算得出</li>
+<li>hash: 当前区块hash</li>
+<li>height: 当前区块高度</li>
+<li>nonce: 随机数，挖矿时反复使用不同的nonce来生成不同哈希值</li>
+<li>previous_block_hash: 当前区块的父区块hash值</li>
+<li>size: 当前区块的字节数</li>
+<li>timestamp: 出块时间</li>
+<li>transaction_merkle_root: </li>
+<li>transaction_status_hash: </li>
+<li>transactions: 当前块中的utxo交易</li>
+</ul>
+<p>由于创世区块是第一个块，创世区块的父区块，也就是previous_block_hash参数，默认情况下为0000000000000000000000000000000000000000000000000000000000000000</p>
+<p>时间戳timestamp为1524549600，时间为2018-04-24 14:00:00也就是比原链上主网的时间。</p>
+<h2 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h2><h3 id="获取区块链状态"><a href="#获取区块链状态" class="headerlink" title="获取区块链状态"></a>获取区块链状态</h3><p><strong> protocol/protocol.go </strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">func NewChain(store Store, txPool *TxPool) (*Chain, error) &#123;</span><br><span class="line">	// ...</span><br><span class="line">	storeStatus := store.GetStoreStatus()</span><br><span class="line">	if storeStatus == nil &#123;</span><br><span class="line">		if err := c.initChainStatus(); err != nil &#123;</span><br><span class="line">			return nil, err</span><br><span class="line">		&#125;</span><br><span class="line">		storeStatus = store.GetStoreStatus()</span><br><span class="line">	&#125;</span><br><span class="line">	// ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>当我们第一次启动比原链节点时，store.GetStoreStatus会从db中获取存储状态，获取存储状态的过程是从LevelDB中查询key为blockStore的数据，如果查询出错则认为是第一次运行比原链节点，那么就需要初始化比原主链。</p>
+<h3 id="初始化主链"><a href="#初始化主链" class="headerlink" title="初始化主链"></a>初始化主链</h3><p><strong> protocol/protocol.go </strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">func (c *Chain) initChainStatus() error &#123;</span><br><span class="line">	genesisBlock := config.GenesisBlock()</span><br><span class="line">	txStatus := bc.NewTransactionStatus()</span><br><span class="line">	for i := range genesisBlock.Transactions &#123;</span><br><span class="line">		txStatus.SetStatus(i, false)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	if err := c.store.SaveBlock(genesisBlock, txStatus); err != nil &#123;</span><br><span class="line">		return err</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	utxoView := state.NewUtxoViewpoint()</span><br><span class="line">	bcBlock := types.MapBlock(genesisBlock)</span><br><span class="line">	if err := utxoView.ApplyBlock(bcBlock, txStatus); err != nil &#123;</span><br><span class="line">		return err</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	node, err := state.NewBlockNode(&amp;genesisBlock.BlockHeader, nil)</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		return err</span><br><span class="line">	&#125;</span><br><span class="line">	return c.store.SaveChainStatus(node, utxoView)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>初始化主链有几步操作：</p>
+<ul>
+<li>config.GenesisBlock()获取创世区块</li>
+<li>设置创世区块中所有交易状态</li>
+<li>存储创世区块到LevelDB</li>
+<li>state.NewUtxoViewpoint()用于临时小部分utxo状态存储集合</li>
+<li>实例化BlockNode，BlockNode用于选择最佳链作为主链</li>
+<li>保存最新主链状态</li>
+</ul>
+<h3 id="被硬编码的创世区块"><a href="#被硬编码的创世区块" class="headerlink" title="被硬编码的创世区块"></a>被硬编码的创世区块</h3><p><strong> config/genesis.go </strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line">func genesisTx() *types.Tx &#123;</span><br><span class="line">	contract, err := hex.DecodeString(&quot;00148c9d063ff74ee6d9ffa88d83aeb038068366c4c4&quot;)</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		log.Panicf(&quot;fail on decode genesis tx output control program&quot;)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	txData := types.TxData&#123;</span><br><span class="line">		Version: 1,</span><br><span class="line">		Inputs: []*types.TxInput&#123;</span><br><span class="line">			types.NewCoinbaseInput([]byte(&quot;Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.&quot;)),</span><br><span class="line">		&#125;,</span><br><span class="line">		Outputs: []*types.TxOutput&#123;</span><br><span class="line">			types.NewTxOutput(*consensus.BTMAssetID, consensus.InitialBlockSubsidy, contract),</span><br><span class="line">		&#125;,</span><br><span class="line">	&#125;</span><br><span class="line">	return types.NewTx(txData)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func mainNetGenesisBlock() *types.Block &#123;</span><br><span class="line">	tx := genesisTx()</span><br><span class="line">	txStatus := bc.NewTransactionStatus()</span><br><span class="line">	txStatus.SetStatus(0, false)</span><br><span class="line">	txStatusHash, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		log.Panicf(&quot;fail on calc genesis tx status merkle root&quot;)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	merkleRoot, err := bc.TxMerkleRoot([]*bc.Tx&#123;tx.Tx&#125;)</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		log.Panicf(&quot;fail on calc genesis tx merkel root&quot;)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	block := &amp;types.Block&#123;</span><br><span class="line">		BlockHeader: types.BlockHeader&#123;</span><br><span class="line">			Version:   1,</span><br><span class="line">			Height:    0,</span><br><span class="line">			Nonce:     9253507043297,</span><br><span class="line">			Timestamp: 1524549600,</span><br><span class="line">			Bits:      2161727821137910632,</span><br><span class="line">			BlockCommitment: types.BlockCommitment&#123;</span><br><span class="line">				TransactionsMerkleRoot: merkleRoot,</span><br><span class="line">				TransactionStatusHash:  txStatusHash,</span><br><span class="line">			&#125;,</span><br><span class="line">		&#125;,</span><br><span class="line">		Transactions: []*types.Tx&#123;tx&#125;,</span><br><span class="line">	&#125;</span><br><span class="line">	return block</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>mainNetGenesisBlock主要有如下操作：</p>
+<ul>
+<li>生成创世区块中的交易，默认就一笔交易</li>
+<li>设置块中的交易状态为false</li>
+<li>将创世区块设置为merkle树的根节点</li>
+<li>实例化Block块并返回</li>
+</ul>
+<p>genesisTx函数生成创世区块中的交易，默认就一笔交易，一笔交易中包含input输入和output输出。</p>
+<p>input输入：<br>输入中有一句话”Information is power. – Jan/11/2013. Computing is power. – Apr/24/2018.”这是为了纪念Aaron Swartz的精神</p>
+<p>output输出：<br>输出中我们看到consensus.InitialBlockSubsidy创世区块的奖励。总共140700041250000000/1e8 = 1407000412。也就是14亿个BTM币。</p>
+<h3 id="计算即权力"><a href="#计算即权力" class="headerlink" title="计算即权力"></a>计算即权力</h3><p>引用比原链创始人长铗的话：</p>
+<p>4月24号，我们主网上线，信息即权力，2013年Jaruary11；计算即权力，2018年April24。这句话是为了纪念Aaron Swartz的精神，信息即权力可以视为互联网宣言，致力于信息自由传播，让公民隐私得到保护。计算即权力，致力于让资产自由的交易，自由的流动，让公民的财富得到保护，我觉得这是非常好的纪念。</p>
+
+          
+        
+      
+    </div>
+    
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2018/08/17/bytom源码分析-protobuf生成比原核心代码/" itemprop="url">
                   bytom源码分析-protobuf生成核心代码
                 </a>
@@ -1339,7 +1485,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">9</span>
+              <span class="site-state-item-count">10</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
