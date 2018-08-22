@@ -102,7 +102,7 @@ Golang Version: 1.8
 
 创世区块介绍区块链里的第一个区块创被称为创世区块。它是区块链里面所有区块的共同祖先。
 在比原链中创世区块被硬编码到bytomd中，每一个比原节点">
-<meta property="og:updated_time" content="2018-08-22T09:40:09.000Z">
+<meta property="og:updated_time" content="2018-08-22T09:43:31.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Derek解读-Bytom源码分析-创世区块">
 <meta name="twitter:description" content="Derek解读-Bytom源码分析-创世区块简介https://github.com/Bytom/bytom
@@ -319,8 +319,7 @@ Golang Version: 1.8
 <li>previous_block_hash: 当前区块的父区块hash值</li>
 <li>size: 当前区块的字节数</li>
 <li>timestamp: 出块时间</li>
-<li>transaction_merkle_root: </li>
-<li>transaction_status_hash: </li>
+<li>transaction_merkle_root: 创世区块的merkle树根节点</li>
 <li>transactions: 当前块中的utxo交易</li>
 </ul>
 <p>由于创世区块是第一个块，创世区块的父区块，也就是previous_block_hash参数，默认情况下为0000000000000000000000000000000000000000000000000000000000000000</p>
