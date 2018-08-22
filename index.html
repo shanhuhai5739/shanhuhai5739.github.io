@@ -241,6 +241,152 @@
             
               
                 
+                <a class="post-title-link" href="/2018/08/22/Derek解读-Bytom源码分析-持久化存储LevelDB/" itemprop="url">
+                  Derek解读-Bytom源码分析-持久化存储LevelDB
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2018-08-22T18:54:26+08:00" content="2018-08-22">
+              2018-08-22
+            </time>
+          </span>
+
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="Derek解读-Bytom源码分析-持久化存储LevelDB"><a href="#Derek解读-Bytom源码分析-持久化存储LevelDB" class="headerlink" title="Derek解读-Bytom源码分析-持久化存储LevelDB"></a>Derek解读-Bytom源码分析-持久化存储LevelDB</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p><a href="https://github.com/Bytom/bytom" target="_blank" rel="external">https://github.com/Bytom/bytom</a></p>
+<p>本章介绍Derek解读-Bytom源码分析-持久化存储LevelDB</p>
+<blockquote>
+<p>作者使用MacOS操作系统，其他平台也大同小异</p>
+<p>Golang Version: 1.8</p>
+</blockquote>
+<h2 id="LevelDB介绍"><a href="#LevelDB介绍" class="headerlink" title="LevelDB介绍"></a>LevelDB介绍</h2><p>比原链默认使用leveldb数据库。Leveldb是一个google实现的非常高效的kv数据库。LevelDB是单进程的服务，性能非常之高，在一台4核Q6600的CPU机器上，每秒钟写数据超过40w，而随机读的性能每秒钟超过10w。<br>    由于Leveldb是单进程服务，不能同时有多个进程进行对一个数据库进行读写。同一时间只能有一个进程，或一个进程多并发的方式进行读写。<br>比原链在数据存储层上存储所有链上地址、资产交易等信息。</p>
+<h3 id="LevelDB的增删改查操作"><a href="#LevelDB的增删改查操作" class="headerlink" title="LevelDB的增删改查操作"></a>LevelDB的增删改查操作</h3><p>LevelDB是google开发的一个高性能K/V存储，本节我们介绍下LevelDB如何对LevelDB增删改查。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line">import (</span><br><span class="line">	&quot;fmt&quot;</span><br><span class="line"></span><br><span class="line">	dbm &quot;github.com/tendermint/tmlibs/db&quot;</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">var (</span><br><span class="line">	Key        = &quot;TESTKEY&quot;</span><br><span class="line">	LevelDBDir = &quot;/tmp/data&quot;</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">func main() &#123;</span><br><span class="line">	db := dbm.NewDB(&quot;test&quot;, &quot;leveldb&quot;, LevelDBDir)</span><br><span class="line">	defer db.Close()</span><br><span class="line"></span><br><span class="line">	db.Set([]byte(Key), []byte(&quot;This is a test.&quot;))</span><br><span class="line"></span><br><span class="line">	value := db.Get([]byte(Key))</span><br><span class="line">	if value == nil &#123;</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line">	fmt.Printf(&quot;key:%v, value:%v\n&quot;, Key, string(value))</span><br><span class="line"></span><br><span class="line">	db.Delete([]byte(Key))</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// Output</span><br><span class="line">// key:TESTKEY, value:This is a test.</span><br></pre></td></tr></table></figure>
+<p>以上Output是执行该程序得到的输出结果。</p>
+<p>该程序对leveld进行了增删改查操作。dbm.NewDB得到db对象，在/tmp/data目录下会生成一个叫test.db的目录。该目录存放该数据库的所有数据。<br>db.Set        设置key的value值，key不存在则新建，key存在则修改。<br>db.Get        得到key中value数据。<br>db.Delete    删除key及value的数据。</p>
+<h2 id="比原链的数据库"><a href="#比原链的数据库" class="headerlink" title="比原链的数据库"></a>比原链的数据库</h2><p>默认情况下，数据存储目录在–home参数下的data目录。以Darwin平台为例，默认数据库存储在 $HOME/Library/Bytom/data。</p>
+<ul>
+<li>accesstoken.db    token信息(钱包访问控制权限)</li>
+<li>core.db        核心数据库，存储主链相关数据。包括块信息、交易信息、资产信息等</li>
+<li>discover.db        分布式网络中端到端的节点信息</li>
+<li>trusthistory.db</li>
+<li>txdb.db        存储交易相关信息</li>
+<li>txfeeds.db        目前比原链代码版本未使用该功能，暂不介绍</li>
+<li>wallet.db        本地钱包数据库。存储用户、资产、交易、utox等信息</li>
+</ul>
+<p>以上所有数据库都由database模块管理</p>
+<h3 id="比原数据库接口"><a href="#比原数据库接口" class="headerlink" title="比原数据库接口"></a>比原数据库接口</h3><p>在比原链中数据持久化存储由database模块管理，但是持久化相关接口在protocol/store.go中</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">type Store interface &#123;</span><br><span class="line">	BlockExist(*bc.Hash) bool</span><br><span class="line"></span><br><span class="line">	GetBlock(*bc.Hash) (*types.Block, error)</span><br><span class="line">	GetStoreStatus() *BlockStoreState</span><br><span class="line">	GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error)</span><br><span class="line">	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error</span><br><span class="line">	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)</span><br><span class="line"></span><br><span class="line">	LoadBlockIndex() (*state.BlockIndex, error)</span><br><span class="line">	SaveBlock(*types.Block, *bc.TransactionStatus) error</span><br><span class="line">	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>BlockExist 根据hash判断区块是否存在</li>
+<li>GetBlock 根据hash获取该区块</li>
+<li>GetStoreStatus 获取store的存储状态</li>
+<li>GetTransactionStatus 根据hash获取该块中所有交易的状态</li>
+<li>GetTransactionsUtxo 缓存与输入txs相关的所有utxo</li>
+<li>GetUtxo(*bc.Hash) 根据hash获取该块内的所有utxo</li>
+<li>LoadBlockIndex 加载块索引，从db中读取所有block header信息并缓存在内存中</li>
+<li>SaveBlock 存储块和交易状态</li>
+<li>SaveChainStatus 设置主链的状态，当节点第一次启动时，节点会根据key为blockStore的内容判断是否初始化主链。</li>
+</ul>
+<h3 id="比原链数据库key前缀"><a href="#比原链数据库key前缀" class="headerlink" title="比原链数据库key前缀"></a>比原链数据库key前缀</h3><p><strong> database/leveldb/store.go </strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">var (</span><br><span class="line">	blockStoreKey     = []byte(&quot;blockStore&quot;)</span><br><span class="line">	blockPrefix       = []byte(&quot;B:&quot;)</span><br><span class="line">	blockHeaderPrefix = []byte(&quot;BH:&quot;)</span><br><span class="line">	txStatusPrefix    = []byte(&quot;BTS:&quot;)</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>blockStoreKey 主链状态前缀</li>
+<li>blockPrefix 块信息前缀</li>
+<li>blockHeaderPrefix 块头信息前缀</li>
+<li>txStatusPrefix 交易状态前缀</li>
+</ul>
+<h3 id="GetBlock查询块过程分析"><a href="#GetBlock查询块过程分析" class="headerlink" title="GetBlock查询块过程分析"></a>GetBlock查询块过程分析</h3><p><strong> database/leveldb/store.go </strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) &#123;</span><br><span class="line">	return s.cache.lookup(hash)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong> database/leveldb/cache.go </strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">func (c *blockCache) lookup(hash *bc.Hash) (*types.Block, error) &#123;</span><br><span class="line">	if b, ok := c.get(hash); ok &#123;</span><br><span class="line">		return b, nil</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	block, err := c.single.Do(hash.String(), func() (interface&#123;&#125;, error) &#123;</span><br><span class="line">		b := c.fillFn(hash)</span><br><span class="line">		if b == nil &#123;</span><br><span class="line">			return nil, fmt.Errorf(&quot;There are no block with given hash %s&quot;, hash.String())</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		c.add(b)</span><br><span class="line">		return b, nil</span><br><span class="line">	&#125;)</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		return nil, err</span><br><span class="line">	&#125;</span><br><span class="line">	return block.(*types.Block), nil</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>GetBlock函数最终会执行lookup函数。lookup函数总共操作有两步：</p>
+<ul>
+<li>从缓存中查询hash值，如果查到则返回</li>
+<li>如果为从缓存中查询到则回调fillFn回调函数。fillFn回调函数会将从磁盘上获得到块信息存储到缓存中并返回该块的信息。</li>
+</ul>
+<p>fillFn回调函数实际上调取的是database/leveldb/store.go下的GetBlock，它会从磁盘中获取block信息并返回。</p>
+
+          
+        
+      
+    </div>
+    
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2018/08/18/Derek解读-Bytom源码分析-创世区块/" itemprop="url">
                   Derek解读-Bytom源码分析-创世区块
                 </a>
@@ -1307,145 +1453,13 @@
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2016/04/27/cache2go源码分析(二):cache2go缓存表和缓存项/" itemprop="url">
-                  cache2go源码分析(二):cache2go缓存表和缓存项
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-04-27T20:38:27+08:00" content="2016-04-27">
-              2016-04-27
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/programming/" itemprop="url" rel="index">
-                    <span itemprop="name">编程</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-
-          
-          
-
-          
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <hr>
-<h3 id="cache2go源码结构"><a href="#cache2go源码结构" class="headerlink" title="cache2go源码结构"></a>cache2go源码结构</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">├── LICENSE.txt</span><br><span class="line">├── README.md</span><br><span class="line">├── benchmark_test.go // 压力测试程序</span><br><span class="line">├── cache.go       // 缓存对象创建</span><br><span class="line">├── cache_test.go  // 测试程序</span><br><span class="line">├── cacheitem.go   // 缓存项</span><br><span class="line">├── cachetable.go  // 缓存表</span><br><span class="line">├── errors.go  // 自定义错误</span><br><span class="line">└── examples  // 用法案例</span><br><span class="line">    ├── callbacks</span><br><span class="line">    │   └── callbacks.go</span><br><span class="line">    ├── dataloader</span><br><span class="line">    │   └── dataloader.go</span><br><span class="line">    └── mycachedapp</span><br><span class="line">        └── mycachedapp.go</span><br></pre></td></tr></table></figure>
-<h3 id="缓存表结构体"><a href="#缓存表结构体" class="headerlink" title="缓存表结构体"></a>缓存表结构体</h3><p><em>./cache2go/cachetable.go</em></p>
-<p>缓存表是一个map结构，key为表名，value为CacheItem缓存对象<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">// 缓存表结构体</span><br><span class="line">type CacheTable struct &#123;</span><br><span class="line">    // 读写锁</span><br><span class="line">    sync.RWMutex</span><br><span class="line"></span><br><span class="line">    // 缓存表名称</span><br><span class="line">    name string</span><br><span class="line">    // 缓存表中的缓存项</span><br><span class="line">    items map[interface&#123;&#125;]*CacheItem</span><br><span class="line"></span><br><span class="line">    // 缓存表清理定时器</span><br><span class="line">    cleanupTimer *time.Timer</span><br><span class="line">    // 缓存表清理定时器时间间隔</span><br><span class="line">    cleanupInterval time.Duration</span><br><span class="line"></span><br><span class="line">    // 缓存表日志对象</span><br><span class="line">    logger *log.Logger</span><br><span class="line"></span><br><span class="line">    // 回调方法：当获取一个不存在的缓存对象key时触发</span><br><span class="line">    loadData func(key interface&#123;&#125;, args ...interface&#123;&#125;) *CacheItem</span><br><span class="line">    // 回调方法：当添加一个缓存对象到缓存表中时触发</span><br><span class="line">    addedItem func(item *CacheItem)</span><br><span class="line">    // 回调方法：当删除一个对象从缓存表中时触发</span><br><span class="line">    aboutToDeleteItem func(item *CacheItem)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<h3 id="缓存项结构体"><a href="#缓存项结构体" class="headerlink" title="缓存项结构体"></a>缓存项结构体</h3><p><em>./cache2go/cacheitem.go</em></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">// 缓存项结构体</span><br><span class="line">type CacheItem struct &#123;</span><br><span class="line">    // 读写锁</span><br><span class="line">    sync.RWMutex</span><br><span class="line"></span><br><span class="line">    // 缓存项key</span><br><span class="line">    key interface&#123;&#125;</span><br><span class="line">    // 缓存项数据</span><br><span class="line">    data interface&#123;&#125;</span><br><span class="line">    // 缓存项生命周期，0表示永不失效</span><br><span class="line">    lifeSpan time.Duration</span><br><span class="line"></span><br><span class="line">    // 缓存项创建时间戳</span><br><span class="line">    createdOn time.Time</span><br><span class="line">    // 缓存项访问的时间戳</span><br><span class="line">    accessedOn time.Time</span><br><span class="line">    // 缓存访问次数</span><br><span class="line">    accessCount int64</span><br><span class="line"></span><br><span class="line">    // 回调方法：当缓存项被移除时触发</span><br><span class="line">    aboutToExpire func(key interface&#123;&#125;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="创建缓存表对象"><a href="#创建缓存表对象" class="headerlink" title="创建缓存表对象"></a>创建缓存表对象</h3><p><em>./cache2go/cache.go</em></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">var (</span><br><span class="line">    cache = make(map[string]*CacheTable)</span><br><span class="line">    mutex sync.RWMutex</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">// 返回一个缓存表对象</span><br><span class="line">func Cache(table string) *CacheTable &#123;</span><br><span class="line">    // 创建一个新的缓存表</span><br><span class="line">    mutex.RLock()</span><br><span class="line">    t, ok := cache[table]</span><br><span class="line">    mutex.RUnlock()</span><br><span class="line"></span><br><span class="line">    // 如果创建不成功则实例化CacheTable</span><br><span class="line">    if !ok &#123;</span><br><span class="line">        t = &amp;CacheTable&#123;</span><br><span class="line">            name:  table,</span><br><span class="line">            items: make(map[interface&#123;&#125;]*CacheItem),</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        mutex.Lock()</span><br><span class="line">        cache[table] = t</span><br><span class="line">        mutex.Unlock()</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    return t</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="添加缓存对象"><a href="#添加缓存对象" class="headerlink" title="添加缓存对象"></a>添加缓存对象</h3><p><em>./cache2go/cachetable.go</em></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">// 添加一个缓存对象到缓存表中</span><br><span class="line">// 参数key：缓存项的key，通过key可以找到对应的数据</span><br><span class="line">// 参数liftSpan：缓存项生命周期</span><br><span class="line">// 参数data：缓存项的value（数据）</span><br><span class="line">// 返回：缓存对象</span><br><span class="line">func (table *CacheTable) Add(key interface&#123;&#125;, lifeSpan time.Duration, data interface&#123;&#125;) *CacheItem &#123;</span><br><span class="line">    item := CreateCacheItem(key, lifeSpan, data)</span><br><span class="line"></span><br><span class="line">    // Add item to cache.</span><br><span class="line">    table.Lock()</span><br><span class="line">    table.log(&quot;Adding item with key&quot;, key, &quot;and lifespan of&quot;, lifeSpan, &quot;to table&quot;, table.name)</span><br><span class="line">    table.items[key] = &amp;item</span><br><span class="line"></span><br><span class="line">    // Cache values so we don&apos;t keep blocking the mutex.</span><br><span class="line">    expDur := table.cleanupInterval</span><br><span class="line">    addedItem := table.addedItem</span><br><span class="line">    table.Unlock()</span><br><span class="line"></span><br><span class="line">    // 触发回调函数</span><br><span class="line">    if addedItem != nil &#123;</span><br><span class="line">        addedItem(&amp;item)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // 缓存项生命周期大于0则执行缓存项生命周期检查定时器</span><br><span class="line">    if lifeSpan &gt; 0 &amp;&amp; (expDur == 0 || lifeSpan &lt; expDur) &#123;</span><br><span class="line">        table.expirationCheck()</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    return &amp;item</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><em>./cache2go/cacheitem.go</em></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">// 创建一个缓存项对象</span><br><span class="line">// 参数key：缓存项的key，通过key可以找到对应的数据</span><br><span class="line">// 参数liftSpan：缓存项周期</span><br><span class="line">// 参数data：缓存项的value（数据）</span><br><span class="line">func CreateCacheItem(key interface&#123;&#125;, lifeSpan time.Duration, data interface&#123;&#125;) CacheItem &#123;</span><br><span class="line">    t := time.Now()</span><br><span class="line">    return CacheItem&#123;</span><br><span class="line">        key:           key,</span><br><span class="line">        lifeSpan:      lifeSpan,</span><br><span class="line">        createdOn:     t,</span><br><span class="line">        accessedOn:    t,</span><br><span class="line">        accessCount:   0,</span><br><span class="line">        aboutToExpire: nil,</span><br><span class="line">        data:          data,</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="设置删除时回调"><a href="#设置删除时回调" class="headerlink" title="设置删除时回调"></a>设置删除时回调</h3><p><em>./cache2go/cachetable.go</em></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">// 删除时回调：当删除一个缓存对象时回调该方法</span><br><span class="line">func (table *CacheTable) SetAboutToDeleteItemCallback(f func(*CacheItem)) &#123;</span><br><span class="line">    table.Lock()</span><br><span class="line">    defer table.Unlock()</span><br><span class="line">    table.aboutToDeleteItem = f</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="删除缓存对象"><a href="#删除缓存对象" class="headerlink" title="删除缓存对象"></a>删除缓存对象</h3><p><em>./cache2go/cachetable.go</em></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">// 删除一个缓存项从缓存表中</span><br><span class="line">func (table *CacheTable) Delete(key interface&#123;&#125;) (*CacheItem, error) &#123;</span><br><span class="line">    table.RLock()</span><br><span class="line">    r, ok := table.items[key]</span><br><span class="line">    if !ok &#123;</span><br><span class="line">        table.RUnlock()</span><br><span class="line">        return nil, ErrKeyNotFound</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // Cache value so we don&apos;t keep blocking the mutex.</span><br><span class="line">    aboutToDeleteItem := table.aboutToDeleteItem</span><br><span class="line">    table.RUnlock()</span><br><span class="line"></span><br><span class="line">    // Trigger callbacks before deleting an item from cache.</span><br><span class="line">    // 触发回调函数</span><br><span class="line">    if aboutToDeleteItem != nil &#123;</span><br><span class="line">        aboutToDeleteItem(r)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    r.RLock()</span><br><span class="line">    defer r.RUnlock()</span><br><span class="line">    if r.aboutToExpire != nil &#123;</span><br><span class="line">        r.aboutToExpire(key)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    table.Lock()</span><br><span class="line">    defer table.Unlock()</span><br><span class="line">    table.log(&quot;Deleting item with key&quot;, key, &quot;created on&quot;, r.createdOn, &quot;and hit&quot;, r.accessCount, &quot;times from table&quot;, table.name)</span><br><span class="line">    delete(table.items, key)</span><br><span class="line"></span><br><span class="line">    return r, nil</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="清空所有缓存对象"><a href="#清空所有缓存对象" class="headerlink" title="清空所有缓存对象"></a>清空所有缓存对象</h3><p><em>./cache2go/cachetable.go</em></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">// 删除所有缓存项从缓存表中</span><br><span class="line">func (table *CacheTable) Flush() &#123;</span><br><span class="line">    table.Lock()</span><br><span class="line">    defer table.Unlock()</span><br><span class="line"></span><br><span class="line">    table.log(&quot;Flushing table&quot;, table.name)</span><br><span class="line"></span><br><span class="line">    table.items = make(map[interface&#123;&#125;]*CacheItem)</span><br><span class="line">    table.cleanupInterval = 0</span><br><span class="line">    if table.cleanupTimer != nil &#123;</span><br><span class="line">        table.cleanupTimer.Stop()</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="缓存项失效定时器实现"><a href="#缓存项失效定时器实现" class="headerlink" title="缓存项失效定时器实现"></a>缓存项失效定时器实现</h3><p><em>./cache2go/cachetable.go</em></p>
-<p>每次从缓存表中取值时会执行KeepAlive函数，更新accessedOn和accessCount字段，用于判断当前缓存项是否过期</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">if ok &#123;</span><br><span class="line">    // Update access counter and timestamp.</span><br><span class="line">    r.KeepAlive()</span><br><span class="line">    return r, nil</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><em>./cache2go/cacheitem.go</em></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">// 更新缓存项访问的时间戳并访问次数+1</span><br><span class="line">func (item *CacheItem) KeepAlive() &#123;</span><br><span class="line">    item.Lock()</span><br><span class="line">    defer item.Unlock()</span><br><span class="line">    item.accessedOn = time.Now()</span><br><span class="line">    item.accessCount++</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><em>./cache2go/cachetable.go</em></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line">// 缓存项生命周期检查定时器</span><br><span class="line">func (table *CacheTable) expirationCheck() &#123;</span><br><span class="line">    table.Lock()</span><br><span class="line">    if table.cleanupTimer != nil &#123;</span><br><span class="line">        table.cleanupTimer.Stop()</span><br><span class="line">    &#125;</span><br><span class="line">    if table.cleanupInterval &gt; 0 &#123;</span><br><span class="line">        table.log(&quot;Expiration check triggered after&quot;, table.cleanupInterval, &quot;for table&quot;, table.name)</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        table.log(&quot;Expiration check installed for table&quot;, table.name)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // Cache value so we don&apos;t keep blocking the mutex.</span><br><span class="line">    items := table.items</span><br><span class="line">    table.Unlock()</span><br><span class="line"></span><br><span class="line">    // To be more accurate with timers, we would need to update &apos;now&apos; on every</span><br><span class="line">    // loop iteration. Not sure it&apos;s really efficient though.</span><br><span class="line">    // 判断缓存项是否过期</span><br><span class="line">    // 使用当前时间戳(now) 减去 缓存项最新访问的时间戳(accessedOn)得到的时间如果大于等于缓存项的缓存周期则说明该缓存项已经过期，删除该key。否则获取下一次清理的时间间隔(smallestDuration)</span><br><span class="line">    now := time.Now()</span><br><span class="line">    smallestDuration := 0 * time.Second</span><br><span class="line">    for key, item := range items &#123;</span><br><span class="line">        // Cache values so we don&apos;t keep blocking the mutex.</span><br><span class="line">        item.RLock()</span><br><span class="line">        lifeSpan := item.lifeSpan</span><br><span class="line">        accessedOn := item.accessedOn</span><br><span class="line">        item.RUnlock()</span><br><span class="line"></span><br><span class="line">        if lifeSpan == 0 &#123;</span><br><span class="line">            continue</span><br><span class="line">        &#125;</span><br><span class="line">        if now.Sub(accessedOn) &gt;= lifeSpan &#123;</span><br><span class="line">            // Item has excessed its lifespan.</span><br><span class="line">            table.Delete(key)</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            // Find the item chronologically closest to its end-of-lifespan.</span><br><span class="line">            if smallestDuration == 0 || lifeSpan &lt; smallestDuration &#123;</span><br><span class="line">                smallestDuration = lifeSpan - now.Sub(accessedOn)</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // 设置下一次清理的时间间隔</span><br><span class="line">    table.Lock()</span><br><span class="line">    table.cleanupInterval = smallestDuration</span><br><span class="line">    if smallestDuration &gt; 0 &#123;</span><br><span class="line">        table.cleanupTimer = time.AfterFunc(smallestDuration, func() &#123;</span><br><span class="line">            go table.expirationCheck()</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;</span><br><span class="line">    table.Unlock()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-          
-        
-      
-    </div>
-    
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
+  <nav class="pagination">
+    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/"><i class="fa fa-angle-right"></i></a>
+  </nav>
+
 
 
           </div>
@@ -1484,7 +1498,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-count">11</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>

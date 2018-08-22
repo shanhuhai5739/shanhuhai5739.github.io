@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://yoursite.com/"/>
-  <updated>2018-08-22T09:43:31.000Z</updated>
+  <updated>2018-08-22T13:03:12.000Z</updated>
   <id>http://yoursite.com/</id>
   
   <author>
@@ -14,6 +14,81 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Derek解读-Bytom源码分析-持久化存储LevelDB</title>
+    <link href="http://yoursite.com/2018/08/22/Derek%E8%A7%A3%E8%AF%BB-Bytom%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-%E6%8C%81%E4%B9%85%E5%8C%96%E5%AD%98%E5%82%A8LevelDB/"/>
+    <id>http://yoursite.com/2018/08/22/Derek解读-Bytom源码分析-持久化存储LevelDB/</id>
+    <published>2018-08-22T10:54:26.000Z</published>
+    <updated>2018-08-22T13:03:12.000Z</updated>
+    
+    <content type="html">&lt;h1 id=&quot;Derek解读-Bytom源码分析-持久化存储LevelDB&quot;&gt;&lt;a href=&quot;#Derek解读-Bytom源码分析-持久化存储LevelDB&quot; class=&quot;headerlink&quot; title=&quot;Derek解读-Bytom源码分析-持久化存储LevelDB&quot;&gt;&lt;/a&gt;Derek解读-Bytom源码分析-持久化存储LevelDB&lt;/h1&gt;&lt;h2 id=&quot;简介&quot;&gt;&lt;a href=&quot;#简介&quot; class=&quot;headerlink&quot; title=&quot;简介&quot;&gt;&lt;/a&gt;简介&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;https://github.com/Bytom/bytom&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://github.com/Bytom/bytom&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;本章介绍Derek解读-Bytom源码分析-持久化存储LevelDB&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;作者使用MacOS操作系统，其他平台也大同小异&lt;/p&gt;
+&lt;p&gt;Golang Version: 1.8&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&quot;LevelDB介绍&quot;&gt;&lt;a href=&quot;#LevelDB介绍&quot; class=&quot;headerlink&quot; title=&quot;LevelDB介绍&quot;&gt;&lt;/a&gt;LevelDB介绍&lt;/h2&gt;&lt;p&gt;比原链默认使用leveldb数据库。Leveldb是一个google实现的非常高效的kv数据库。LevelDB是单进程的服务，性能非常之高，在一台4核Q6600的CPU机器上，每秒钟写数据超过40w，而随机读的性能每秒钟超过10w。&lt;br&gt;    由于Leveldb是单进程服务，不能同时有多个进程进行对一个数据库进行读写。同一时间只能有一个进程，或一个进程多并发的方式进行读写。&lt;br&gt;比原链在数据存储层上存储所有链上地址、资产交易等信息。&lt;/p&gt;
+&lt;h3 id=&quot;LevelDB的增删改查操作&quot;&gt;&lt;a href=&quot;#LevelDB的增删改查操作&quot; class=&quot;headerlink&quot; title=&quot;LevelDB的增删改查操作&quot;&gt;&lt;/a&gt;LevelDB的增删改查操作&lt;/h3&gt;&lt;p&gt;LevelDB是google开发的一个高性能K/V存储，本节我们介绍下LevelDB如何对LevelDB增删改查。&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;20&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;21&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;22&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;23&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;24&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;25&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;26&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;27&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;28&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;29&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;30&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;package main&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;import (&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;quot;fmt&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	dbm &amp;quot;github.com/tendermint/tmlibs/db&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;var (&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	Key        = &amp;quot;TESTKEY&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	LevelDBDir = &amp;quot;/tmp/data&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;func main() &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	db := dbm.NewDB(&amp;quot;test&amp;quot;, &amp;quot;leveldb&amp;quot;, LevelDBDir)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	defer db.Close()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	db.Set([]byte(Key), []byte(&amp;quot;This is a test.&amp;quot;))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	value := db.Get([]byte(Key))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	if value == nil &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		return&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	fmt.Printf(&amp;quot;key:%v, value:%v\n&amp;quot;, Key, string(value))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	db.Delete([]byte(Key))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;// Output&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;// key:TESTKEY, value:This is a test.&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;以上Output是执行该程序得到的输出结果。&lt;/p&gt;
+&lt;p&gt;该程序对leveld进行了增删改查操作。dbm.NewDB得到db对象，在/tmp/data目录下会生成一个叫test.db的目录。该目录存放该数据库的所有数据。&lt;br&gt;db.Set        设置key的value值，key不存在则新建，key存在则修改。&lt;br&gt;db.Get        得到key中value数据。&lt;br&gt;db.Delete    删除key及value的数据。&lt;/p&gt;
+&lt;h2 id=&quot;比原链的数据库&quot;&gt;&lt;a href=&quot;#比原链的数据库&quot; class=&quot;headerlink&quot; title=&quot;比原链的数据库&quot;&gt;&lt;/a&gt;比原链的数据库&lt;/h2&gt;&lt;p&gt;默认情况下，数据存储目录在–home参数下的data目录。以Darwin平台为例，默认数据库存储在 $HOME/Library/Bytom/data。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;accesstoken.db    token信息(钱包访问控制权限)&lt;/li&gt;
+&lt;li&gt;core.db        核心数据库，存储主链相关数据。包括块信息、交易信息、资产信息等&lt;/li&gt;
+&lt;li&gt;discover.db        分布式网络中端到端的节点信息&lt;/li&gt;
+&lt;li&gt;trusthistory.db&lt;/li&gt;
+&lt;li&gt;txdb.db        存储交易相关信息&lt;/li&gt;
+&lt;li&gt;txfeeds.db        目前比原链代码版本未使用该功能，暂不介绍&lt;/li&gt;
+&lt;li&gt;wallet.db        本地钱包数据库。存储用户、资产、交易、utox等信息&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;以上所有数据库都由database模块管理&lt;/p&gt;
+&lt;h3 id=&quot;比原数据库接口&quot;&gt;&lt;a href=&quot;#比原数据库接口&quot; class=&quot;headerlink&quot; title=&quot;比原数据库接口&quot;&gt;&lt;/a&gt;比原数据库接口&lt;/h3&gt;&lt;p&gt;在比原链中数据持久化存储由database模块管理，但是持久化相关接口在protocol/store.go中&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;type Store interface &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	BlockExist(*bc.Hash) bool&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	GetBlock(*bc.Hash) (*types.Block, error)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	GetStoreStatus() *BlockStoreState&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	LoadBlockIndex() (*state.BlockIndex, error)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	SaveBlock(*types.Block, *bc.TransactionStatus) error&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;ul&gt;
+&lt;li&gt;BlockExist 根据hash判断区块是否存在&lt;/li&gt;
+&lt;li&gt;GetBlock 根据hash获取该区块&lt;/li&gt;
+&lt;li&gt;GetStoreStatus 获取store的存储状态&lt;/li&gt;
+&lt;li&gt;GetTransactionStatus 根据hash获取该块中所有交易的状态&lt;/li&gt;
+&lt;li&gt;GetTransactionsUtxo 缓存与输入txs相关的所有utxo&lt;/li&gt;
+&lt;li&gt;GetUtxo(*bc.Hash) 根据hash获取该块内的所有utxo&lt;/li&gt;
+&lt;li&gt;LoadBlockIndex 加载块索引，从db中读取所有block header信息并缓存在内存中&lt;/li&gt;
+&lt;li&gt;SaveBlock 存储块和交易状态&lt;/li&gt;
+&lt;li&gt;SaveChainStatus 设置主链的状态，当节点第一次启动时，节点会根据key为blockStore的内容判断是否初始化主链。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&quot;比原链数据库key前缀&quot;&gt;&lt;a href=&quot;#比原链数据库key前缀&quot; class=&quot;headerlink&quot; title=&quot;比原链数据库key前缀&quot;&gt;&lt;/a&gt;比原链数据库key前缀&lt;/h3&gt;&lt;p&gt;&lt;strong&gt; database/leveldb/store.go &lt;/strong&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;var (&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	blockStoreKey     = []byte(&amp;quot;blockStore&amp;quot;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	blockPrefix       = []byte(&amp;quot;B:&amp;quot;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	blockHeaderPrefix = []byte(&amp;quot;BH:&amp;quot;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	txStatusPrefix    = []byte(&amp;quot;BTS:&amp;quot;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;)&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;ul&gt;
+&lt;li&gt;blockStoreKey 主链状态前缀&lt;/li&gt;
+&lt;li&gt;blockPrefix 块信息前缀&lt;/li&gt;
+&lt;li&gt;blockHeaderPrefix 块头信息前缀&lt;/li&gt;
+&lt;li&gt;txStatusPrefix 交易状态前缀&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&quot;GetBlock查询块过程分析&quot;&gt;&lt;a href=&quot;#GetBlock查询块过程分析&quot; class=&quot;headerlink&quot; title=&quot;GetBlock查询块过程分析&quot;&gt;&lt;/a&gt;GetBlock查询块过程分析&lt;/h3&gt;&lt;p&gt;&lt;strong&gt; database/leveldb/store.go &lt;/strong&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	return s.cache.lookup(hash)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;&lt;strong&gt; database/leveldb/cache.go &lt;/strong&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;func (c *blockCache) lookup(hash *bc.Hash) (*types.Block, error) &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	if b, ok := c.get(hash); ok &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		return b, nil&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	block, err := c.single.Do(hash.String(), func() (interface&amp;#123;&amp;#125;, error) &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		b := c.fillFn(hash)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		if b == nil &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;			return nil, fmt.Errorf(&amp;quot;There are no block with given hash %s&amp;quot;, hash.String())&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		c.add(b)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		return b, nil&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	if err != nil &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		return nil, err&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	return block.(*types.Block), nil&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;GetBlock函数最终会执行lookup函数。lookup函数总共操作有两步：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;从缓存中查询hash值，如果查到则返回&lt;/li&gt;
+&lt;li&gt;如果为从缓存中查询到则回调fillFn回调函数。fillFn回调函数会将从磁盘上获得到块信息存储到缓存中并返回该块的信息。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;fillFn回调函数实际上调取的是database/leveldb/store.go下的GetBlock，它会从磁盘中获取block信息并返回。&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;h1 id=&quot;Derek解读-Bytom源码分析-持久化存储LevelDB&quot;&gt;&lt;a href=&quot;#Derek解读-Bytom源码分析-持久化存储LevelDB&quot; class=&quot;headerlink&quot; title=&quot;Derek解读-Bytom源码分析-持久化存储LevelDB&quot;&gt;
+    
+    </summary>
+    
+    
+      <category term="golang" scheme="http://yoursite.com/tags/golang/"/>
+    
+      <category term="bytom" scheme="http://yoursite.com/tags/bytom/"/>
+    
+  </entry>
   
   <entry>
     <title>Derek解读-Bytom源码分析-创世区块</title>
