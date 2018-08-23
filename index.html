@@ -241,6 +241,149 @@
             
               
                 
+                <a class="post-title-link" href="/2018/08/23/Derek解读-Bytom源码分析-持久化存储LevelDB-二-cache缓存/" itemprop="url">
+                  Derek解读-Bytom源码分析-持久化存储LevelDB(二)-cache缓存
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2018-08-23T15:49:24+08:00" content="2018-08-23">
+              2018-08-23
+            </time>
+          </span>
+
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="Derek解读-Bytom源码分析-持久化存储LevelDB-二-cache缓存"><a href="#Derek解读-Bytom源码分析-持久化存储LevelDB-二-cache缓存" class="headerlink" title="Derek解读-Bytom源码分析-持久化存储LevelDB(二)-cache缓存"></a>Derek解读-Bytom源码分析-持久化存储LevelDB(二)-cache缓存</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p><a href="https://github.com/Bytom/bytom" target="_blank" rel="external">https://github.com/Bytom/bytom</a></p>
+<p>本章介绍Derek解读-Bytom源码分析-持久化存储LevelDB(二)-cache缓存</p>
+<blockquote>
+<p>作者使用MacOS操作系统，其他平台也大同小异</p>
+<p>Golang Version: 1.8</p>
+</blockquote>
+<h2 id="block-cache缓存介绍"><a href="#block-cache缓存介绍" class="headerlink" title="block cache缓存介绍"></a>block cache缓存介绍</h2><p>上一篇《Derek解读-Bytom源码分析-持久化存储LevelDB》文章介绍了比原链数据持久化到磁盘。当执行读取数据时从cache中得到，实现快速访问。</p>
+<p>比原链的block cache主要实现有两个部分：</p>
+<ul>
+<li>lru: 缓存淘汰算法</li>
+<li>fillFn: 回调函数</li>
+</ul>
+<p>比原链的block cache实现过程如下：</p>
+<ol>
+<li>执行GetBlock函数</li>
+<li>从block cache中查询，如果命中缓存则返回</li>
+<li>block cache中未命中则执行fillFn回调函数从磁盘中获取并缓存艹block cache中，然后返回</li>
+</ol>
+<h2 id="blockCache分析"><a href="#blockCache分析" class="headerlink" title="blockCache分析"></a>blockCache分析</h2><h3 id="blockCache结构"><a href="#blockCache结构" class="headerlink" title="blockCache结构"></a>blockCache结构</h3><p><strong> database/leveldb/cache.go </strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">type blockCache struct &#123;</span><br><span class="line">	mu     sync.Mutex</span><br><span class="line">	lru    *lru.Cache</span><br><span class="line">	fillFn func(hash *bc.Hash) *types.Block</span><br><span class="line">	single singleflight.Group</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>mu: 互斥锁，保证共享数据操作的一致性</li>
+<li>lru: 缓存淘汰算法</li>
+<li>fillFn: 回调函数</li>
+<li>single: 回调函数的调用机制，同一时间保证只有一个回调函数在执行。</li>
+</ul>
+<h3 id="缓存命中和不命中的操作"><a href="#缓存命中和不命中的操作" class="headerlink" title="缓存命中和不命中的操作"></a>缓存命中和不命中的操作</h3><p><strong> database/leveldb/cache.go </strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">func (c *blockCache) lookup(hash *bc.Hash) (*types.Block, error) &#123;</span><br><span class="line">	if b, ok := c.get(hash); ok &#123;</span><br><span class="line">		return b, nil</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	block, err := c.single.Do(hash.String(), func() (interface&#123;&#125;, error) &#123;</span><br><span class="line">		b := c.fillFn(hash)</span><br><span class="line">		if b == nil &#123;</span><br><span class="line">			return nil, fmt.Errorf(&quot;There are no block with given hash %s&quot;, hash.String())</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		c.add(b)</span><br><span class="line">		return b, nil</span><br><span class="line">	&#125;)</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		return nil, err</span><br><span class="line">	&#125;</span><br><span class="line">	return block.(*types.Block), nil</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (c *blockCache) get(hash *bc.Hash) (*types.Block, bool) &#123;</span><br><span class="line">	c.mu.Lock()</span><br><span class="line">	block, ok := c.lru.Get(*hash)</span><br><span class="line">	c.mu.Unlock()</span><br><span class="line">	if block == nil &#123;</span><br><span class="line">		return nil, ok</span><br><span class="line">	&#125;</span><br><span class="line">	return block.(*types.Block), ok</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>lookup函数从block cache中查询，如果命中缓存则返回。如果block cache未命中则single.Do执行fillFn回调函数从磁盘中获取并缓存block cache中，然后返回</p>
+<h2 id="LRU缓存淘汰算法"><a href="#LRU缓存淘汰算法" class="headerlink" title="LRU缓存淘汰算法"></a>LRU缓存淘汰算法</h2><p>LRU（Least recently used）算法根据数据的历史访问记录来进行淘汰数据，如果数据最近被访问过，那么缓存被命中的几率也更高。</p>
+<p><img src="/2018/08/23/Derek解读-Bytom源码分析-持久化存储LevelDB-二-cache缓存/lru.png" alt="logo"></p>
+<ol>
+<li>新的数据插入到链表头部</li>
+<li>每当缓存命中，则将数据移到链表头部</li>
+<li>当链表满的时候，将链表尾部的数据丢弃</li>
+</ol>
+<h3 id="LRU算法实现"><a href="#LRU算法实现" class="headerlink" title="LRU算法实现"></a>LRU算法实现</h3><p>LRU一般使用hash map和doubly linked list双向链表实现</p>
+<h4 id="实例化LRU-CACHE"><a href="#实例化LRU-CACHE" class="headerlink" title="实例化LRU CACHE"></a>实例化LRU CACHE</h4><p><strong> vendor/github.com/golang/groupcache/lru/lru.go </strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">func New(maxEntries int) *Cache &#123;</span><br><span class="line">	return &amp;Cache&#123;</span><br><span class="line">		MaxEntries: maxEntries,</span><br><span class="line">		ll:         list.New(),</span><br><span class="line">		cache:      make(map[interface&#123;&#125;]*list.Element),</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>MaxEntries:最大缓存条目数，如果为0则表示无限制</li>
+<li>ll: 双向链表数据结构</li>
+</ul>
+<h4 id="LRU查询元素"><a href="#LRU查询元素" class="headerlink" title="LRU查询元素"></a>LRU查询元素</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">func (c *Cache) Get(key Key) (value interface&#123;&#125;, ok bool) &#123;</span><br><span class="line">	if c.cache == nil &#123;</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line">	if ele, hit := c.cache[key]; hit &#123;</span><br><span class="line">		c.ll.MoveToFront(ele)</span><br><span class="line">		return ele.Value.(*entry).value, true</span><br><span class="line">	&#125;</span><br><span class="line">	return</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Get获取元素，如果元素命中则将元素移至链表头部，保持最新的访问</p>
+<h4 id="LRU添加元素"><a href="#LRU添加元素" class="headerlink" title="LRU添加元素"></a>LRU添加元素</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">func (c *Cache) Add(key Key, value interface&#123;&#125;) &#123;</span><br><span class="line">	if c.cache == nil &#123;</span><br><span class="line">		c.cache = make(map[interface&#123;&#125;]*list.Element)</span><br><span class="line">		c.ll = list.New()</span><br><span class="line">	&#125;</span><br><span class="line">	if ee, ok := c.cache[key]; ok &#123;</span><br><span class="line">		c.ll.MoveToFront(ee)</span><br><span class="line">		ee.Value.(*entry).value = value</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line">	ele := c.ll.PushFront(&amp;entry&#123;key, value&#125;)</span><br><span class="line">	c.cache[key] = ele</span><br><span class="line">	if c.MaxEntries != 0 &amp;&amp; c.ll.Len() &gt; c.MaxEntries &#123;</span><br><span class="line">		c.RemoveOldest()</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Add添加元素有三步操作：</p>
+<ol>
+<li>如果当前缓存中存在该元素则将元素移至链表头并返回</li>
+<li>如果缓存中不存在该元素则将元素插入链表头部</li>
+<li>如果缓存的元素超过MaxEntries限制则移除链表最末尾的元素</li>
+</ol>
+
+          
+        
+      
+    </div>
+    
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2018/08/22/Derek解读-Bytom源码分析-持久化存储LevelDB/" itemprop="url">
                   Derek解读-Bytom源码分析-持久化存储LevelDB
                 </a>
@@ -1335,124 +1478,6 @@
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2016/04/28/cache2go源码分析(一):cache2go应用场景/" itemprop="url">
-                  cache2go源码分析(一):cache2go应用场景
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-04-28T18:00:46+08:00" content="2016-04-28">
-              2016-04-28
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/programming/" itemprop="url" rel="index">
-                    <span itemprop="name">编程</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-
-          
-          
-
-          
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <hr>
-<h3 id="cache2go介绍"><a href="#cache2go介绍" class="headerlink" title="cache2go介绍"></a>cache2go介绍</h3><p>cache2go是golang的一个对象缓存库，可设置对象的缓存周期</p>
-<h3 id="cache2go官方案例"><a href="#cache2go官方案例" class="headerlink" title="cache2go官方案例"></a>cache2go官方案例</h3><p>下载cache2go</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">go get github.com/muesli/cache2go</span><br><span class="line">cd cache2go &amp;&amp; go build &amp;&amp; go test -v</span><br></pre></td></tr></table></figure>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line">import (</span><br><span class="line">    &quot;github.com/muesli/cache2go&quot;</span><br><span class="line">    &quot;fmt&quot;</span><br><span class="line">    &quot;time&quot;</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">type myStruct struct &#123;</span><br><span class="line">    text     string</span><br><span class="line">    moreData []byte</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func main() &#123;</span><br><span class="line">    // 创建cache缓存对象</span><br><span class="line">    cache := cache2go.Cache(&quot;myCache&quot;)</span><br><span class="line"></span><br><span class="line">    // 实例化val，将val存至cache缓存中，缓存对象的key为someKey，缓存周期为5秒(5秒过后缓存对象失效)</span><br><span class="line">    val := myStruct&#123;&quot;This is a test!&quot;, []byte&#123;&#125;&#125;</span><br><span class="line">    cache.Add(&quot;someKey&quot;, 5*time.Second, &amp;val)</span><br><span class="line"></span><br><span class="line">    // 从缓存中检索出key为someKey的缓存对象</span><br><span class="line">    res, err := cache.Value(&quot;someKey&quot;)</span><br><span class="line">    if err == nil &#123;</span><br><span class="line">        fmt.Println(&quot;Found value in cache:&quot;, res.Data().(*myStruct).text)</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        fmt.Println(&quot;Error retrieving value from cache:&quot;, err)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // 等待6秒使someKey对象自动失效</span><br><span class="line">    time.Sleep(6 * time.Second)</span><br><span class="line">    res, err = cache.Value(&quot;someKey&quot;)</span><br><span class="line">    if err != nil &#123;</span><br><span class="line">        fmt.Println(&quot;Item is not cached (anymore).&quot;)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // 添加key为someKey的对象缓存周期为0，表示永不过期</span><br><span class="line">    cache.Add(&quot;someKey&quot;, 0, &amp;val)</span><br><span class="line"></span><br><span class="line">    // cache2go支持一些回调和加载机制</span><br><span class="line">    cache.SetAboutToDeleteItemCallback(func(e *cache2go.CacheItem) &#123;</span><br><span class="line">        fmt.Println(&quot;Deleting:&quot;, e.Key(), e.Data().(*myStruct).text, e.CreatedOn())</span><br><span class="line">    &#125;)</span><br><span class="line"></span><br><span class="line">    // 从cache缓存中移除someKey</span><br><span class="line">    cache.Delete(&quot;someKey&quot;)</span><br><span class="line"></span><br><span class="line">    // 清空整个cache缓存</span><br><span class="line">    cache.Flush()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>执行结果</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ go run mycachedapp.go</span><br><span class="line">Found value in cache: This is a test!</span><br><span class="line">Item is not cached (anymore).</span><br><span class="line">Deleting: someKey This is a test! 2016-04-29 14:20:04.758864028 +0800 CST</span><br></pre></td></tr></table></figure>
-          
-        
-      
-    </div>
-    
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1498,7 +1523,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">11</span>
+              <span class="site-state-item-count">12</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>

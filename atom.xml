@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://yoursite.com/"/>
-  <updated>2018-08-22T13:03:12.000Z</updated>
+  <updated>2018-08-23T09:42:30.000Z</updated>
   <id>http://yoursite.com/</id>
   
   <author>
@@ -14,6 +14,78 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Derek解读-Bytom源码分析-持久化存储LevelDB(二)-cache缓存</title>
+    <link href="http://yoursite.com/2018/08/23/Derek%E8%A7%A3%E8%AF%BB-Bytom%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-%E6%8C%81%E4%B9%85%E5%8C%96%E5%AD%98%E5%82%A8LevelDB-%E4%BA%8C-cache%E7%BC%93%E5%AD%98/"/>
+    <id>http://yoursite.com/2018/08/23/Derek解读-Bytom源码分析-持久化存储LevelDB-二-cache缓存/</id>
+    <published>2018-08-23T07:49:24.000Z</published>
+    <updated>2018-08-23T09:42:30.000Z</updated>
+    
+    <content type="html">&lt;h1 id=&quot;Derek解读-Bytom源码分析-持久化存储LevelDB-二-cache缓存&quot;&gt;&lt;a href=&quot;#Derek解读-Bytom源码分析-持久化存储LevelDB-二-cache缓存&quot; class=&quot;headerlink&quot; title=&quot;Derek解读-Bytom源码分析-持久化存储LevelDB(二)-cache缓存&quot;&gt;&lt;/a&gt;Derek解读-Bytom源码分析-持久化存储LevelDB(二)-cache缓存&lt;/h1&gt;&lt;h2 id=&quot;简介&quot;&gt;&lt;a href=&quot;#简介&quot; class=&quot;headerlink&quot; title=&quot;简介&quot;&gt;&lt;/a&gt;简介&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;https://github.com/Bytom/bytom&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://github.com/Bytom/bytom&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;本章介绍Derek解读-Bytom源码分析-持久化存储LevelDB(二)-cache缓存&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;作者使用MacOS操作系统，其他平台也大同小异&lt;/p&gt;
+&lt;p&gt;Golang Version: 1.8&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&quot;block-cache缓存介绍&quot;&gt;&lt;a href=&quot;#block-cache缓存介绍&quot; class=&quot;headerlink&quot; title=&quot;block cache缓存介绍&quot;&gt;&lt;/a&gt;block cache缓存介绍&lt;/h2&gt;&lt;p&gt;上一篇《Derek解读-Bytom源码分析-持久化存储LevelDB》文章介绍了比原链数据持久化到磁盘。当执行读取数据时从cache中得到，实现快速访问。&lt;/p&gt;
+&lt;p&gt;比原链的block cache主要实现有两个部分：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;lru: 缓存淘汰算法&lt;/li&gt;
+&lt;li&gt;fillFn: 回调函数&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;比原链的block cache实现过程如下：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;执行GetBlock函数&lt;/li&gt;
+&lt;li&gt;从block cache中查询，如果命中缓存则返回&lt;/li&gt;
+&lt;li&gt;block cache中未命中则执行fillFn回调函数从磁盘中获取并缓存艹block cache中，然后返回&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&quot;blockCache分析&quot;&gt;&lt;a href=&quot;#blockCache分析&quot; class=&quot;headerlink&quot; title=&quot;blockCache分析&quot;&gt;&lt;/a&gt;blockCache分析&lt;/h2&gt;&lt;h3 id=&quot;blockCache结构&quot;&gt;&lt;a href=&quot;#blockCache结构&quot; class=&quot;headerlink&quot; title=&quot;blockCache结构&quot;&gt;&lt;/a&gt;blockCache结构&lt;/h3&gt;&lt;p&gt;&lt;strong&gt; database/leveldb/cache.go &lt;/strong&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;type blockCache struct &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	mu     sync.Mutex&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	lru    *lru.Cache&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	fillFn func(hash *bc.Hash) *types.Block&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	single singleflight.Group&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;ul&gt;
+&lt;li&gt;mu: 互斥锁，保证共享数据操作的一致性&lt;/li&gt;
+&lt;li&gt;lru: 缓存淘汰算法&lt;/li&gt;
+&lt;li&gt;fillFn: 回调函数&lt;/li&gt;
+&lt;li&gt;single: 回调函数的调用机制，同一时间保证只有一个回调函数在执行。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&quot;缓存命中和不命中的操作&quot;&gt;&lt;a href=&quot;#缓存命中和不命中的操作&quot; class=&quot;headerlink&quot; title=&quot;缓存命中和不命中的操作&quot;&gt;&lt;/a&gt;缓存命中和不命中的操作&lt;/h3&gt;&lt;p&gt;&lt;strong&gt; database/leveldb/cache.go &lt;/strong&gt;&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;20&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;21&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;22&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;23&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;24&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;25&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;26&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;27&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;28&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;29&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;func (c *blockCache) lookup(hash *bc.Hash) (*types.Block, error) &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	if b, ok := c.get(hash); ok &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		return b, nil&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	block, err := c.single.Do(hash.String(), func() (interface&amp;#123;&amp;#125;, error) &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		b := c.fillFn(hash)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		if b == nil &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;			return nil, fmt.Errorf(&amp;quot;There are no block with given hash %s&amp;quot;, hash.String())&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		c.add(b)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		return b, nil&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	if err != nil &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		return nil, err&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	return block.(*types.Block), nil&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;func (c *blockCache) get(hash *bc.Hash) (*types.Block, bool) &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	c.mu.Lock()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	block, ok := c.lru.Get(*hash)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	c.mu.Unlock()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	if block == nil &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		return nil, ok&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	return block.(*types.Block), ok&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;lookup函数从block cache中查询，如果命中缓存则返回。如果block cache未命中则single.Do执行fillFn回调函数从磁盘中获取并缓存block cache中，然后返回&lt;/p&gt;
+&lt;h2 id=&quot;LRU缓存淘汰算法&quot;&gt;&lt;a href=&quot;#LRU缓存淘汰算法&quot; class=&quot;headerlink&quot; title=&quot;LRU缓存淘汰算法&quot;&gt;&lt;/a&gt;LRU缓存淘汰算法&lt;/h2&gt;&lt;p&gt;LRU（Least recently used）算法根据数据的历史访问记录来进行淘汰数据，如果数据最近被访问过，那么缓存被命中的几率也更高。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/2018/08/23/Derek解读-Bytom源码分析-持久化存储LevelDB-二-cache缓存/lru.png&quot; alt=&quot;logo&quot;&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;新的数据插入到链表头部&lt;/li&gt;
+&lt;li&gt;每当缓存命中，则将数据移到链表头部&lt;/li&gt;
+&lt;li&gt;当链表满的时候，将链表尾部的数据丢弃&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&quot;LRU算法实现&quot;&gt;&lt;a href=&quot;#LRU算法实现&quot; class=&quot;headerlink&quot; title=&quot;LRU算法实现&quot;&gt;&lt;/a&gt;LRU算法实现&lt;/h3&gt;&lt;p&gt;LRU一般使用hash map和doubly linked list双向链表实现&lt;/p&gt;
+&lt;h4 id=&quot;实例化LRU-CACHE&quot;&gt;&lt;a href=&quot;#实例化LRU-CACHE&quot; class=&quot;headerlink&quot; title=&quot;实例化LRU CACHE&quot;&gt;&lt;/a&gt;实例化LRU CACHE&lt;/h4&gt;&lt;p&gt;&lt;strong&gt; vendor/github.com/golang/groupcache/lru/lru.go &lt;/strong&gt;&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;func New(maxEntries int) *Cache &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	return &amp;amp;Cache&amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		MaxEntries: maxEntries,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		ll:         list.New(),&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		cache:      make(map[interface&amp;#123;&amp;#125;]*list.Element),&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;MaxEntries:最大缓存条目数，如果为0则表示无限制&lt;/li&gt;
+&lt;li&gt;ll: 双向链表数据结构&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id=&quot;LRU查询元素&quot;&gt;&lt;a href=&quot;#LRU查询元素&quot; class=&quot;headerlink&quot; title=&quot;LRU查询元素&quot;&gt;&lt;/a&gt;LRU查询元素&lt;/h4&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;func (c *Cache) Get(key Key) (value interface&amp;#123;&amp;#125;, ok bool) &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	if c.cache == nil &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		return&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	if ele, hit := c.cache[key]; hit &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		c.ll.MoveToFront(ele)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		return ele.Value.(*entry).value, true&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	return&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;Get获取元素，如果元素命中则将元素移至链表头部，保持最新的访问&lt;/p&gt;
+&lt;h4 id=&quot;LRU添加元素&quot;&gt;&lt;a href=&quot;#LRU添加元素&quot; class=&quot;headerlink&quot; title=&quot;LRU添加元素&quot;&gt;&lt;/a&gt;LRU添加元素&lt;/h4&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;func (c *Cache) Add(key Key, value interface&amp;#123;&amp;#125;) &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	if c.cache == nil &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		c.cache = make(map[interface&amp;#123;&amp;#125;]*list.Element)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		c.ll = list.New()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	if ee, ok := c.cache[key]; ok &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		c.ll.MoveToFront(ee)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		ee.Value.(*entry).value = value&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		return&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	ele := c.ll.PushFront(&amp;amp;entry&amp;#123;key, value&amp;#125;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	c.cache[key] = ele&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	if c.MaxEntries != 0 &amp;amp;&amp;amp; c.ll.Len() &amp;gt; c.MaxEntries &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;		c.RemoveOldest()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;	&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;Add添加元素有三步操作：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;如果当前缓存中存在该元素则将元素移至链表头并返回&lt;/li&gt;
+&lt;li&gt;如果缓存中不存在该元素则将元素插入链表头部&lt;/li&gt;
+&lt;li&gt;如果缓存的元素超过MaxEntries限制则移除链表最末尾的元素&lt;/li&gt;
+&lt;/ol&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;h1 id=&quot;Derek解读-Bytom源码分析-持久化存储LevelDB-二-cache缓存&quot;&gt;&lt;a href=&quot;#Derek解读-Bytom源码分析-持久化存储LevelDB-二-cache缓存&quot; class=&quot;headerlink&quot; title=&quot;Derek解读-Byto
+    
+    </summary>
+    
+    
+      <category term="golang" scheme="http://yoursite.com/tags/golang/"/>
+    
+      <category term="bytom" scheme="http://yoursite.com/tags/bytom/"/>
+    
+  </entry>
   
   <entry>
     <title>Derek解读-Bytom源码分析-持久化存储LevelDB</title>

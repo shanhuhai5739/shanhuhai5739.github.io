@@ -241,6 +241,124 @@
             
               
                 
+                <a class="post-title-link" href="/2016/04/28/cache2go源码分析(一):cache2go应用场景/" itemprop="url">
+                  cache2go源码分析(一):cache2go应用场景
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-04-28T18:00:46+08:00" content="2016-04-28">
+              2016-04-28
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/programming/" itemprop="url" rel="index">
+                    <span itemprop="name">编程</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <hr>
+<h3 id="cache2go介绍"><a href="#cache2go介绍" class="headerlink" title="cache2go介绍"></a>cache2go介绍</h3><p>cache2go是golang的一个对象缓存库，可设置对象的缓存周期</p>
+<h3 id="cache2go官方案例"><a href="#cache2go官方案例" class="headerlink" title="cache2go官方案例"></a>cache2go官方案例</h3><p>下载cache2go</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">go get github.com/muesli/cache2go</span><br><span class="line">cd cache2go &amp;&amp; go build &amp;&amp; go test -v</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line">import (</span><br><span class="line">    &quot;github.com/muesli/cache2go&quot;</span><br><span class="line">    &quot;fmt&quot;</span><br><span class="line">    &quot;time&quot;</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">type myStruct struct &#123;</span><br><span class="line">    text     string</span><br><span class="line">    moreData []byte</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func main() &#123;</span><br><span class="line">    // 创建cache缓存对象</span><br><span class="line">    cache := cache2go.Cache(&quot;myCache&quot;)</span><br><span class="line"></span><br><span class="line">    // 实例化val，将val存至cache缓存中，缓存对象的key为someKey，缓存周期为5秒(5秒过后缓存对象失效)</span><br><span class="line">    val := myStruct&#123;&quot;This is a test!&quot;, []byte&#123;&#125;&#125;</span><br><span class="line">    cache.Add(&quot;someKey&quot;, 5*time.Second, &amp;val)</span><br><span class="line"></span><br><span class="line">    // 从缓存中检索出key为someKey的缓存对象</span><br><span class="line">    res, err := cache.Value(&quot;someKey&quot;)</span><br><span class="line">    if err == nil &#123;</span><br><span class="line">        fmt.Println(&quot;Found value in cache:&quot;, res.Data().(*myStruct).text)</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        fmt.Println(&quot;Error retrieving value from cache:&quot;, err)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // 等待6秒使someKey对象自动失效</span><br><span class="line">    time.Sleep(6 * time.Second)</span><br><span class="line">    res, err = cache.Value(&quot;someKey&quot;)</span><br><span class="line">    if err != nil &#123;</span><br><span class="line">        fmt.Println(&quot;Item is not cached (anymore).&quot;)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // 添加key为someKey的对象缓存周期为0，表示永不过期</span><br><span class="line">    cache.Add(&quot;someKey&quot;, 0, &amp;val)</span><br><span class="line"></span><br><span class="line">    // cache2go支持一些回调和加载机制</span><br><span class="line">    cache.SetAboutToDeleteItemCallback(func(e *cache2go.CacheItem) &#123;</span><br><span class="line">        fmt.Println(&quot;Deleting:&quot;, e.Key(), e.Data().(*myStruct).text, e.CreatedOn())</span><br><span class="line">    &#125;)</span><br><span class="line"></span><br><span class="line">    // 从cache缓存中移除someKey</span><br><span class="line">    cache.Delete(&quot;someKey&quot;)</span><br><span class="line"></span><br><span class="line">    // 清空整个cache缓存</span><br><span class="line">    cache.Flush()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>执行结果</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ go run mycachedapp.go</span><br><span class="line">Found value in cache: This is a test!</span><br><span class="line">Item is not cached (anymore).</span><br><span class="line">Deleting: someKey This is a test! 2016-04-29 14:20:04.758864028 +0800 CST</span><br></pre></td></tr></table></figure>
+          
+        
+      
+    </div>
+    
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2016/04/27/cache2go源码分析(二):cache2go缓存表和缓存项/" itemprop="url">
                   cache2go源码分析(二):cache2go缓存表和缓存项
                 </a>
@@ -401,7 +519,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">11</span>
+              <span class="site-state-item-count">12</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
